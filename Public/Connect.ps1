@@ -169,56 +169,126 @@ function Connect-CAAnalyzer {
     }
     
     process {
-        # Configure parameters for Connect-MgGraph
-        $connectParams = @{
-            Scopes = $requiredScopes
-        }
-        
-        if ($environment -ne 'Global') {
-            $connectParams['Environment'] = $environment
-        }
-        
-        # Configure authentication parameters
-        switch ($AuthMethod) {
-            'Interactive' {
-                # No additional parameters needed for interactive auth
-            }
-            'CertificateThumbprint' {
-                $connectParams['TenantId'] = $TenantId
-                $connectParams['ClientId'] = $ClientId
-                $connectParams['CertificateThumbprint'] = $CertificateThumbprint
-            }
-            'CertificatePath' {
-                $connectParams['TenantId'] = $TenantId
-                $connectParams['ClientId'] = $ClientId
-                $connectParams['CertificatePath'] = $CertificatePath
+        try {
+            # Check if user is in Cloud Shell
+            $isCloudShell = $env:ACC_CLOUD -eq 'Azure'
+            
+            # Check if already connected
+            $context = Get-MgContext -ErrorAction SilentlyContinue
+            if ($context) {
+                # Verify required permissions
+                $missingScopes = @()
+                foreach ($scope in $requiredScopes) {
+                    if ($context.Scopes -notcontains $scope) {
+                        $missingScopes += $scope
+                    }
+                }
                 
-                if ($CertificatePassword) {
-                    $connectParams['CertificatePassword'] = $CertificatePassword
+                if ($missingScopes.Count -eq 0) {
+                    Write-Host "Already connected to Microsoft Graph with required scopes" -ForegroundColor Green
+                    if ($ShowConnectionDetails) {
+                        Write-Host "Tenant: $($context.TenantId)" -ForegroundColor White
+                        Write-Host "Account: $($context.Account)" -ForegroundColor White
+                    }
+                    return $true
+                }
+                else {
+                    Write-Warning "Current connection is missing required scopes: $($missingScopes -join ', ')"
+                    Write-Warning "Reconnecting with all required scopes..."
+                    Disconnect-MgGraph -ErrorAction SilentlyContinue
                 }
             }
-            'ClientSecret' {
-                $connectParams['TenantId'] = $TenantId
-                $connectParams['ClientId'] = $ClientId
-                $connectParams['ClientSecret'] = $ClientSecret
+            
+            # Configure parameters for Connect-MgGraph
+            $connectParams = @{
+                Scopes = $requiredScopes
             }
-            'ManagedIdentity' {
-                $connectParams['Identity'] = $true
-                $connectParams['TenantId'] = $TenantId
+            
+            if ($environment -ne 'Global') {
+                $connectParams['Environment'] = $environment
             }
-        }
-        
-        # Connect with retry logic
-        $attempt = 1
-        $connected = $false
-        
-        while (-not $connected -and $attempt -le $RetryCount) {
+            
+            # Configure authentication parameters
+            switch ($AuthMethod) {
+                'Interactive' {
+                    # No additional parameters needed for interactive auth
+                }
+                'CertificateThumbprint' {
+                    $connectParams['TenantId'] = $TenantId
+                    $connectParams['ClientId'] = $ClientId
+                    $connectParams['CertificateThumbprint'] = $CertificateThumbprint
+                }
+                'CertificatePath' {
+                    $connectParams['TenantId'] = $TenantId
+                    $connectParams['ClientId'] = $ClientId
+                    $connectParams['CertificatePath'] = $CertificatePath
+                    
+                    if ($CertificatePassword) {
+                        $connectParams['CertificatePassword'] = $CertificatePassword
+                    }
+                }
+                'ClientSecret' {
+                    $connectParams['TenantId'] = $TenantId
+                    $connectParams['ClientId'] = $ClientId
+                    $connectParams['ClientSecret'] = $ClientSecret
+                }
+                'ManagedIdentity' {
+                    $connectParams['Identity'] = $true
+                    $connectParams['TenantId'] = $TenantId
+                }
+            }
+            
+            # Connect with retry logic
+            $maxRetries = $RetryCount
+            $retryCount = 0
+            $connected = $false
+            
+            while (-not $connected -and $retryCount -lt $maxRetries) {
+                try {
+                    $retryCount++
+                    Write-Host "Connecting to Microsoft Graph (Attempt $retryCount of $maxRetries)..." -ForegroundColor Yellow
+                    
+                    # Handle different auth types with appropriate error handling
+                    if ($AuthMethod -eq 'Interactive' -and $retryCount -gt 1) {
+                        # Try device code flow on retry for interactive auth
+                        Write-Host "Trying device code authentication..." -ForegroundColor Yellow
+                        Connect-MgGraph -Scopes $requiredScopes -UseDeviceAuthentication -ErrorAction Stop
+                    } else {
+                        Connect-MgGraph @connectParams -ErrorAction Stop
+                    }
+                    
+                    $connected = $true
+                }
+                catch {
+                    if ($retryCount -ge $maxRetries) {
+                        throw
+                    }
+                    
+                    if ($_.Exception.Message -like "*interaction required*" -or $_.Exception.Message -like "*consent*") {
+                        Write-Warning "Authentication requires interaction. Please sign in when prompted."
+                        Connect-MgGraph -Scopes $requiredScopes -UseDeviceAuthentication
+                        $connected = $true
+                    }
+                    else {
+                        Write-Warning "Connection attempt $retryCount failed: $_. Retrying in $RetryDelaySeconds seconds..."
+                        Start-Sleep -Seconds $RetryDelaySeconds
+                    }
+                }
+            }
+            
+            # Test connection with a simple API call
             try {
-                Write-Host "Connecting to Microsoft Graph (Attempt $attempt of $RetryCount)..." -ForegroundColor Yellow
-                Connect-MgGraph @connectParams -ErrorAction Stop
-                $connected = $true
+                $testRequest = Get-MgOrganization -ErrorAction Stop
+                Write-Verbose "Connection test successful. Organization ID: $($testRequest.Id)"
                 
-                Write-Host "Successfully connected to Microsoft Graph with required scopes for CA analysis" -ForegroundColor Green
+                # Store connection info in module scope for later use
+                $Script:CAAnalyzerConnection = @{
+                    Connected = $true
+                    TenantId = (Get-MgContext).TenantId
+                    ConnectedTime = Get-Date
+                    AuthMethod = $AuthMethod
+                    Environment = $environment
+                }
                 
                 # Show connection details if requested
                 if ($ShowConnectionDetails) {
@@ -232,41 +302,45 @@ function Connect-CAAnalyzer {
                     Write-Host "Scopes: $($context.Scopes -join ', ')" -ForegroundColor White
                 }
                 
-                # Test connection by making a simple Graph API call
-                try {
-                    $testRequest = Get-MgOrganization -ErrorAction Stop
-                    Write-Verbose "Connection test successful. Organization ID: $($testRequest.Id)"
-                    
-                    # Store connection info in module scope for later use
-                    $Script:CAAnalyzerConnection = @{
-                        Connected = $true
-                        TenantId = (Get-MgContext).TenantId
-                        ConnectedTime = Get-Date
-                        AuthMethod = $AuthMethod
-                        Environment = $environment
-                    }
-                    
-                    return $true
-                }
-                catch {
-                    Write-Warning "Connection established but test request failed: $_"
-                    Disconnect-MgGraph -ErrorAction SilentlyContinue
-                    $connected = $false
-                    throw "Connection test failed. Please check your permissions and try again."
-                }
+                Write-Host "Successfully connected to Microsoft Graph with required scopes for CA analysis" -ForegroundColor Green
+                return $true
             }
             catch {
-                if ($attempt -lt $RetryCount) {
-                    Write-Warning "Connection attempt $attempt failed: $_"
-                    Write-Host "Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
-                    Start-Sleep -Seconds $RetryDelaySeconds
+                Write-Error "Connection verified but test API call failed: $_"
+                
+                if ($_.Exception.Message -like "*Authorization_RequestDenied*") {
+                    Write-Host "The account does not have sufficient permissions. Please check your role assignments." -ForegroundColor Yellow
+                }
+                elseif ($_.Exception.Message -like "*Authorization_IdentityNotFound*") {
+                    Write-Host "The account was not found in this tenant. Please verify you're using the correct account." -ForegroundColor Yellow
                 }
                 else {
-                    Write-Error "Failed to connect to Microsoft Graph after $RetryCount attempts: $_"
-                    throw "Connection failed. Please check your credentials and try again."
+                    Write-Host "API access issue. Check that your account has the right permissions." -ForegroundColor Yellow
                 }
-                $attempt++
+                
+                Disconnect-MgGraph -ErrorAction SilentlyContinue
+                $Script:CAAnalyzerConnection = $null
+                throw "Connection test failed. Please check your permissions and try again."
             }
+        }
+        catch {
+            Write-Error "Failed to connect to Microsoft Graph after $RetryCount attempts: $_"
+            
+            if ($_.Exception.Message -like "*AADSTS50076*" -or $_.Exception.Message -like "*MFA*") {
+                Write-Host "Multi-factor authentication is required. Please complete the MFA prompt." -ForegroundColor Yellow
+            }
+            elseif ($_.Exception.Message -like "*AADSTS65001*") {
+                Write-Host "Your account doesn't have permission to consent to the required scopes. Contact your administrator." -ForegroundColor Yellow
+            }
+            elseif ($_.Exception.Message -like "*AADSTS50020*") {
+                Write-Host "The user account doesn't exist in the tenant. Make sure you're using the correct account for this tenant." -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "Authentication error. Try running Connect-MgGraph manually with -UseDeviceAuthentication switch." -ForegroundColor Yellow
+            }
+            
+            $Script:CAAnalyzerConnection = $null
+            return $false
         }
     }
     
