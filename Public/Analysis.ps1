@@ -1,5 +1,33 @@
 # Advanced analysis functions for Conditional Access Analyzer
-
+function Test-AdminMFARequired {
+    [CmdletBinding()]
+    param()
+    
+    process {
+        $adminRoles = Get-AdminRoles -PrivilegedOnly
+        $adminRoleIds = $adminRoles.Id
+        
+        $policies = Get-MgIdentityConditionalAccessPolicy
+        
+        $adminMfaPolicies = $policies | Where-Object {
+            ($_.State -eq "enabled") -and
+            (Test-PolicyRequiresMFA -Policy $_) -and
+            (Test-PolicyTargetsAdmins -Policy $_ -AdminRoleIds $adminRoleIds)
+        }
+        
+        $isCompliant = $adminMfaPolicies.Count -gt 0
+        
+        return [PSCustomObject]@{
+            AdminMFARequired = $isCompliant
+            AdminMFAPolicies = $adminMfaPolicies
+            Recommendation = if (-not $isCompliant) {
+                "Configure Conditional Access policies requiring MFA for all administrative roles"
+            } else {
+                $null
+            }
+        }
+    }
+}
 function Get-CAPoliciesSummary {
     <#
     .SYNOPSIS
