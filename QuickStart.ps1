@@ -121,8 +121,233 @@ catch {
     Write-Host "   Attempting alternative import method..." -ForegroundColor Yellow
     
     try {
-        # This would contain a compact version of essential module functions
-        # For brevity, this part is omitted in this example
+        # Add this code to QuickStart.ps1 in the "attempting alternative import method" section
+$coreFunctions = @"
+function Connect-CAAnalyzer {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = \$false)]
+        [switch]\$ShowConnectionDetails
+    )
+    
+    try {
+        \$requiredScopes = @(
+            "Policy.Read.All", "Directory.Read.All", 
+            "DeviceManagementConfiguration.Read.All",
+            "DeviceManagementApps.Read.All"
+        )
+        
+        Connect-MgGraph -Scopes \$requiredScopes -ErrorAction Stop
+        
+        if (\$ShowConnectionDetails) {
+            \$context = Get-MgContext
+            Write-Host "Connected to \$(\$context.TenantId) as \$(\$context.Account)" -ForegroundColor Green
+        }
+        
+        return \$true
+    }
+    catch {
+        Write-Error "Failed to connect to Microsoft Graph: \$_"
+        return \$false
+    }
+}
+
+function Invoke-CAComplianceCheck {
+    [CmdletBinding()]
+    param()
+    
+    try {
+        # Get policies
+        \$policies = Get-MgIdentityConditionalAccessPolicy
+        
+        # Basic checks
+        \$adminMFA = \$false
+        \$userMFA = \$false
+        \$deviceCompliance = \$false
+        \$riskPolicies = \$false
+        
+        foreach(\$policy in \$policies) {
+            # Check for Admin MFA
+            if (\$policy.State -eq "enabled" -and 
+                \$null -ne \$policy.Conditions.Users.IncludeRoles -and
+                \$policy.Conditions.Users.IncludeRoles.Count -gt 0 -and
+                \$null -ne \$policy.GrantControls.BuiltInControls -and
+                \$policy.GrantControls.BuiltInControls -contains "mfa") {
+                \$adminMFA = \$true
+            }
+            
+            # Check for User MFA
+            if (\$policy.State -eq "enabled" -and 
+                \$policy.Conditions.Users.IncludeUsers -contains "All" -and
+                \$null -ne \$policy.GrantControls.BuiltInControls -and
+                \$policy.GrantControls.BuiltInControls -contains "mfa") {
+                \$userMFA = \$true
+            }
+            
+            # Check for Device Compliance
+            if (\$policy.State -eq "enabled" -and
+                \$null -ne \$policy.GrantControls.BuiltInControls -and
+                \$policy.GrantControls.BuiltInControls -contains "compliantDevice") {
+                \$deviceCompliance = \$true
+            }
+            
+            # Check for Risk Policies
+            if (\$policy.State -eq "enabled" -and
+                (\$null -ne \$policy.Conditions.SignInRisk -or
+                 \$null -ne \$policy.Conditions.UserRiskLevels)) {
+                \$riskPolicies = \$true
+            }
+        }
+        
+        # Calculate score
+        \$score = 0
+        if (\$adminMFA) { \$score += 25 }
+        if (\$userMFA) { \$score += 25 }
+        if (\$deviceCompliance) { \$score += 25 }
+        if (\$riskPolicies) { \$score += 25 }
+        
+        # Construct results
+        \$results = [PSCustomObject]@{
+            TenantId = (Get-MgContext).TenantId
+            TenantName = (Get-MgOrganization).DisplayName
+            ComplianceScore = \$score
+            Checks = @{
+                AdminMFA = @{
+                    AdminMFARequired = \$adminMFA
+                    Recommendation = "Implement MFA for all administrative roles"
+                }
+                UserMFA = @{
+                    BroadUserMFARequired = \$userMFA
+                    Recommendation = "Implement MFA for all users"
+                }
+                DeviceCompliance = @{
+                    BroadDeviceComplianceRequired = \$deviceCompliance
+                    Recommendation = "Require device compliance for resource access"
+                }
+                RiskPolicies = @{
+                    SignInRiskPoliciesConfigured = \$riskPolicies
+                    UserRiskPoliciesConfigured = \$riskPolicies
+                    Recommendation = "Configure risk-based Conditional Access policies"
+                }
+                TokenBinding = @{
+                    TokenSessionBindingConfigured = \$false
+                    Recommendation = "Configure token session binding with appropriate sign-in frequency"
+                }
+                MAMPolicies = @{
+                    MAMPoliciesConfigured = \$false
+                    Recommendation = "Configure Mobile Application Management policies"
+                }
+                ZeroTrust = @{
+                    MDCAIntegrated = \$false
+                    GlobalSecureAccessConfigured = \$false
+                    Recommendation = "Configure MDCA integration and Zero Trust Network Access"
+                }
+            }
+        }
+        
+        return \$results
+    }
+    catch {
+        Write-Error "Failed to run compliance check: \$_"
+        throw
+    }
+}
+
+function Export-CAComplianceReport {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = \$false)]
+        [PSCustomObject]\$Results,
+        
+        [Parameter(Mandatory = \$false)]
+        [ValidateSet('HTML', 'CSV', 'JSON')]
+        [string]\$Format = 'HTML',
+        
+        [Parameter(Mandatory = \$false)]
+        [string]\$Path = "~/CA-Compliance-Report.\$($Format.ToLower())",
+        
+        [Parameter(Mandatory = \$false)]
+        [switch]\$OpenReport
+    )
+    
+    if (-not \$Results) {
+        \$Results = Invoke-CAComplianceCheck
+    }
+    
+    # Generate basic report
+    \$htmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conditional Access Compliance Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        h1, h2 { color: #0078D4; }
+        .score { font-size: 2em; font-weight: bold; }
+        .pass { color: green; }
+        .fail { color: red; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Conditional Access Compliance Report</h1>
+    <p>Tenant: \$(\$Results.TenantName)</p>
+    <p>Generated: \$(Get-Date -Format "yyyy-MM-dd HH:mm:ss")</p>
+    
+    <h2>Compliance Score: <span class="score">\$(\$Results.ComplianceScore)%</span></h2>
+    
+    <h2>Security Checks</h2>
+    <table>
+        <tr>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Recommendation</th>
+        </tr>
+        <tr>
+            <td>Admin MFA Required</td>
+            <td class="\$(\$Results.Checks.AdminMFA.AdminMFARequired ? 'pass' : 'fail')">\$(\$Results.Checks.AdminMFA.AdminMFARequired ? 'PASS' : 'FAIL')</td>
+            <td>\$(\$Results.Checks.AdminMFA.Recommendation)</td>
+        </tr>
+        <tr>
+            <td>User MFA Required</td>
+            <td class="\$(\$Results.Checks.UserMFA.BroadUserMFARequired ? 'pass' : 'fail')">\$(\$Results.Checks.UserMFA.BroadUserMFARequired ? 'PASS' : 'FAIL')</td>
+            <td>\$(\$Results.Checks.UserMFA.Recommendation)</td>
+        </tr>
+        <tr>
+            <td>Device Compliance Required</td>
+            <td class="\$(\$Results.Checks.DeviceCompliance.BroadDeviceComplianceRequired ? 'pass' : 'fail')">\$(\$Results.Checks.DeviceCompliance.BroadDeviceComplianceRequired ? 'PASS' : 'FAIL')</td>
+            <td>\$(\$Results.Checks.DeviceCompliance.Recommendation)</td>
+        </tr>
+        <tr>
+            <td>Risk-Based Policies</td>
+            <td class="\$((\$Results.Checks.RiskPolicies.SignInRiskPoliciesConfigured -or \$Results.Checks.RiskPolicies.UserRiskPoliciesConfigured) ? 'pass' : 'fail')">\$((\$Results.Checks.RiskPolicies.SignInRiskPoliciesConfigured -or \$Results.Checks.RiskPolicies.UserRiskPoliciesConfigured) ? 'PASS' : 'FAIL')</td>
+            <td>\$(\$Results.Checks.RiskPolicies.Recommendation)</td>
+        </tr>
+    </table>
+</body>
+</html>
+"@
+
+    # Save report
+    Set-Content -Path \$Path -Value \$htmlContent -Force
+    Write-Host "Report saved to \$Path" -ForegroundColor Green
+    
+    # Open report if requested
+    if (\$OpenReport) {
+        Start-Process \$Path
+    }
+    
+    return \$Path
+}
+"@
+
+# Add this to your QuickStart.ps1 file in the fallback method section
+# Create a module file in temp with the core functions
+$tempModulePath = "$env:TEMP\CAAnalyzerCore.psm1"
+Set-Content -Path $tempModulePath -Value $coreFunctions -Force
+Import-Module $tempModulePath -Force
         Write-Host "   ✓ Successfully used alternative import method" -ForegroundColor Green
     }
     catch {
