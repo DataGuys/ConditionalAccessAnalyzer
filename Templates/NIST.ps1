@@ -452,4 +452,105 @@ function Test-NISTBenchmark {
             CompliantControls = $compliantSubControls
             TotalControls = $totalSubControls
             EvaluationDate = Get-Date
-            DetailLevel =
+           DetailLevel = $DetailLevel
+        }
+    }
+}
+
+function Get-NISTControlMappings {
+    <#
+    .SYNOPSIS
+        Returns mappings between NIST SP 800-53 controls and Conditional Access capabilities.
+    .DESCRIPTION
+        Provides a mapping reference that shows which Conditional Access features
+        map to specific NIST SP 800-53 security controls.
+    .EXAMPLE
+        $mappings = Get-NISTControlMappings
+    #>
+    [CmdletBinding()]
+    param()
+    
+    process {
+        $controlMappings = @(
+            [PSCustomObject]@{
+                NISTControl = "AC-2"
+                ControlTitle = "Account Management"
+                CACapability = "Admin role management"
+                Description = "Conditional Access policies targeting admin roles help enforce principle of least privilege"
+                Implementation = "Create separate policies for each admin role with appropriate controls"
+            },
+            [PSCustomObject]@{
+                NISTControl = "AC-3"
+                ControlTitle = "Access Enforcement"
+                CACapability = "Application access control"
+                Description = "Conditional Access enforces access control decisions for cloud applications"
+                Implementation = "Define policies that control access to specific applications"
+            },
+            [PSCustomObject]@{
+                NISTControl = "AC-7"
+                ControlTitle = "Unsuccessful Logon Attempts"
+                CACapability = "Sign-in risk detection"
+                Description = "Conditional Access with Identity Protection detects and responds to suspicious sign-in attempts"
+                Implementation = "Create policies that block or require MFA for risky sign-ins"
+            },
+            [PSCustomObject]@{
+                NISTControl = "AC-11"
+                ControlTitle = "Session Termination"
+                CACapability = "Sign-in frequency"
+                Description = "Conditional Access can enforce session timeouts and re-authentication"
+                Implementation = "Configure sign-in frequency requirements in session controls"
+            },
+            [PSCustomObject]@{
+                NISTControl = "IA-2(1)"
+                ControlTitle = "Identification and Authentication (Organizational Users) | Network Access to Privileged Accounts"
+                CACapability = "Admin MFA"
+                Description = "Conditional Access enforces MFA for administrators"
+                Implementation = "Create policies requiring MFA for admin roles"
+            },
+            [PSCustomObject]@{
+                NISTControl = "IA-2(2)"
+                ControlTitle = "Identification and Authentication (Organizational Users) | Network Access to Non-Privileged Accounts"
+                CACapability = "User MFA"
+                Description = "Conditional Access enforces MFA for all users"
+                Implementation = "Create policies requiring MFA for all users"
+            },
+            [PSCustomObject]@{
+                NISTControl = "IA-2(6)"
+                ControlTitle = "Identification and Authentication (Organizational Users) | Network Access to Privileged Accounts - Separate Device"
+                CACapability = "Device compliance"
+                Description = "Conditional Access can require trusted devices for privileged access"
+                Implementation = "Create policies requiring device compliance for admin roles"
+            },
+            [PSCustomObject]@{
+                NISTControl = "SC-7"
+                ControlTitle = "Boundary Protection"
+                CACapability = "Location-based conditions"
+                Description = "Conditional Access can restrict access based on IP addresses or countries"
+                Implementation = "Create location-based access policies"
+            },
+            [PSCustomObject]@{
+                NISTControl = "SC-7(10)"
+                ControlTitle = "Boundary Protection | Prevent Unauthorized Exfiltration"
+                CACapability = "Microsoft Defender for Cloud Apps"
+                Description = "MDCA integration enables monitoring and control of sensitive data"
+                Implementation = "Configure session controls with MDCA integration"
+            },
+            [PSCustomObject]@{
+                NISTControl = "SC-8"
+                ControlTitle = "Transmission Confidentiality and Integrity"
+                CACapability = "App protection policies"
+                Description = "Conditional Access can enforce MAM policies for data protection in transit"
+                Implementation = "Require approved applications and app protection"
+            },
+            [PSCustomObject]@{
+                NISTControl = "SI-4"
+                ControlTitle = "Information System Monitoring"
+                CACapability = "Risk detection"
+                Description = "Conditional Access responds to risks detected by Identity Protection"
+                Implementation = "Create risk-based Conditional Access policies"
+            }
+        )
+        
+        return $controlMappings
+    }
+}
