@@ -19,8 +19,8 @@ if (-not (Test-Path -Path $moduleDir)) {
 
 # GitHub repository information
 $repoOwner = "DataGuys"
-$repoName = "ConditionalAccess"
-$branch = "main"
+$repoName = "ConditionalAccessAnalyzer"  # Updated the repository name
+$branch = "refs/heads/main"  # Updated the branch reference format
 $baseUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/$branch"
 
 # Check if running in Azure Cloud Shell
