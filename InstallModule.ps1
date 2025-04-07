@@ -4,27 +4,41 @@
 
 Write-Host "Installing Conditional Access Analyzer..." -ForegroundColor Cyan
 
-# Set temporary directory for download
-$tempDir = "$env:TEMP\CAAnalyzer"
-$moduleDir = "$HOME\CAAnalyzer"
+# Set temporary directory for download - Use user's home directory in Cloud Shell
+$tempDir = Join-Path -Path $HOME -ChildPath "temp\CAAnalyzer"
+$moduleDir = Join-Path -Path $HOME -ChildPath "CAAnalyzer"
 
 # Create directories if they don't exist
 if (-not (Test-Path -Path $tempDir)) {
-    New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
+    try {
+        New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
+        Write-Host "Created temporary directory: $tempDir" -ForegroundColor Green
+    }
+    catch {
+        Write-Warning "Could not create temp directory. Using module directory directly."
+        $tempDir = $moduleDir
+    }
 }
 
 if (-not (Test-Path -Path $moduleDir)) {
-    New-Item -Path $moduleDir -ItemType Directory -Force | Out-Null
+    try {
+        New-Item -Path $moduleDir -ItemType Directory -Force | Out-Null
+        Write-Host "Created module directory: $moduleDir" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to create module directory: $_"
+        return $false
+    }
 }
 
 # GitHub repository information
 $repoOwner = "DataGuys"
-$repoName = "ConditionalAccessAnalyzer"  # Updated the repository name
-$branch = "refs/heads/main"  # Updated the branch reference format
+$repoName = "ConditionalAccessAnalyzer" # Correct repository name
+$branch = "refs/heads/main"
 $baseUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/$branch"
 
 # Check if running in Azure Cloud Shell
-$isCloudShell = $env:ACC_CLOUD -eq 'Azure'
+$isCloudShell = $env:ACC_CLOUD -eq 'Azure' -or (Test-Path -Path "/home")
 Write-Host "Detected environment: $(if ($isCloudShell) { "Azure Cloud Shell" } else { "PowerShell" })"
 
 # Check for required modules
@@ -72,12 +86,25 @@ function Download-RepoFile {
     # Create directory if it doesn't exist
     $saveDir = Split-Path -Path $savePath -Parent
     if (-not (Test-Path -Path $saveDir)) {
-        New-Item -Path $saveDir -ItemType Directory -Force | Out-Null
+        try {
+            New-Item -Path $saveDir -ItemType Directory -Force | Out-Null
+        }
+        catch {
+            Write-Error "Failed to create directory $saveDir. Error: $_"
+            return $false
+        }
     }
     
     try {
+        Write-Verbose "Downloading $fileUrl to $savePath"
         Invoke-WebRequest -Uri $fileUrl -OutFile $savePath -UseBasicParsing
-        return $true
+        if (Test-Path -Path $savePath) {
+            Write-Verbose "Downloaded successfully: $RelativePath"
+            return $true
+        } else {
+            Write-Error "File downloaded but not found on disk: $savePath"
+            return $false
+        }
     }
     catch {
         Write-Error "Failed to download $fileUrl. Error: $_"
@@ -109,13 +136,20 @@ $essentialFiles = @(
 
 # Download files
 $downloadSuccess = $true
+$downloadedFiles = 0
+$totalFiles = $essentialFiles.Count
+
 Write-Host "Downloading module files..." -ForegroundColor Yellow
 foreach ($file in $essentialFiles) {
     $success = Download-RepoFile -RelativePath $file.Path -TargetPath $file.Target
-    if (-not $success) {
+    if ($success) {
+        $downloadedFiles++
+        Write-Progress -Activity "Downloading Module Files" -Status "$downloadedFiles of $totalFiles complete" -PercentComplete (($downloadedFiles / $totalFiles) * 100)
+    } else {
         $downloadSuccess = $false
     }
 }
+Write-Progress -Activity "Downloading Module Files" -Completed
 
 if (-not $downloadSuccess) {
     Write-Error "Failed to download some module files. The module might not work correctly."
@@ -126,7 +160,9 @@ else {
 
 # Import the module
 try {
-    Import-Module "$moduleDir\ConditionalAccessAnalyzer.psd1" -Force
+    $modulePath = Join-Path -Path $moduleDir -ChildPath "ConditionalAccessAnalyzer.psd1"
+    Write-Host "Importing module from: $modulePath" -ForegroundColor Yellow
+    Import-Module $modulePath -Force -ErrorAction Stop
     Write-Host "Conditional Access Analyzer module imported successfully." -ForegroundColor Green
     
     # Display help information
