@@ -82,13 +82,13 @@
             Tags = @('EntraID', 'AzureAD', 'ConditionalAccess', 'Security', 'ZeroTrust', 'Identity')
             
             # A URL to the license for this module.
-            LicenseUri = 'https://github.com/DataGuys/ConditionalAccess/blob/main/LICENSE'
+            LicenseUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer/blob/main/LICENSE'
             
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/DataGuys/ConditionalAccess'
+            ProjectUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer'
             
             # A URL to an icon representing this module.
-            IconUri = 'https://raw.githubusercontent.com/DataGuys/ConditionalAccess/main/assets/logo.png'
+            IconUri = 'https://raw.githubusercontent.com/DataGuys/ConditionalAccessAnalyzer/refs/heads/main/assets/logo.png'
             
             # ReleaseNotes of this module
             ReleaseNotes = 'Initial release of Conditional Access Analyzer'
