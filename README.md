@@ -21,7 +21,7 @@ Conditional Access Analyzer helps security administrators evaluate their Conditi
 ### One-Liner for Azure Cloud Shell
 
 ```powershell
-Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DataGuys/ConditionalAccess/main/InstallModule.ps1" -UseBasicParsing).Content
+Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DataGuys/ConditionalAccessAnalyzer/refs/heads/main/InstallModule.ps1" -UseBasicParsing).Content
 ```
 
 This command downloads and installs the module from GitHub, then launches the analyzer in interactive mode.
