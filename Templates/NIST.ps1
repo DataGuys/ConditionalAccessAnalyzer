@@ -1,155 +1,314 @@
-# InstallModule.ps1
-# Installation script for Conditional Access Analyzer
-# For use with Azure Cloud Shell
+# NIST.ps1 - NIST SP 800-53 benchmark definitions for Conditional Access
+# Provides functions to test against NIST security controls
 
-Write-Host "Installing Conditional Access Analyzer..." -ForegroundColor Cyan
-
-# Set temporary directory for download
-$tempDir = "$env:TEMP\CAAnalyzer"
-$moduleDir = "$HOME\CAAnalyzer"
-
-# Create directories if they don't exist
-if (-not (Test-Path -Path $tempDir)) {
-    New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
-}
-
-if (-not (Test-Path -Path $moduleDir)) {
-    New-Item -Path $moduleDir -ItemType Directory -Force | Out-Null
-}
-
-# GitHub repository information
-$repoOwner = "DataGuys"
-$repoName = "ConditionalAccess"
-$branch = "main"
-$baseUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/$branch"
-
-# Check if running in Azure Cloud Shell
-$isCloudShell = $env:ACC_CLOUD -eq 'Azure'
-Write-Host "Detected environment: $(if ($isCloudShell) { "Azure Cloud Shell" } else { "PowerShell" })"
-
-# Check for required modules
-$requiredModules = @(
-    "Microsoft.Graph.Authentication",
-    "Microsoft.Graph.Identity.SignIns",
-    "Microsoft.Graph.Identity.DirectoryManagement",
-    "Microsoft.Graph.DeviceManagement"
-)
-
-$missingModules = @()
-foreach ($module in $requiredModules) {
-    if (-not (Get-Module -Name $module -ListAvailable)) {
-        $missingModules += $module
-    }
-}
-
-if ($missingModules.Count -gt 0) {
-    Write-Host "Installing required modules: $($missingModules -join ', ')" -ForegroundColor Yellow
-    foreach ($module in $missingModules) {
-        try {
-            Install-Module -Name $module -Force -Scope CurrentUser -AllowClobber
-            Write-Host "  ✓ $module installed successfully" -ForegroundColor Green
-        }
-        catch {
-            Write-Error "Failed to install $module. Error: $_"
-            Write-Host "  × $module installation failed" -ForegroundColor Red
-        }
-    }
-}
-else {
-    Write-Host "All required modules are already installed." -ForegroundColor Green
-}
-
-# Function to download files
-function Download-RepoFile {
+function Test-NISTBenchmark {
+    <#
+    .SYNOPSIS
+        Tests Conditional Access policies against NIST SP 800-53 controls.
+    .DESCRIPTION
+        Evaluates Conditional Access policies against the NIST SP 800-53 security framework
+        to determine compliance with recommended security controls.
+    .PARAMETER Policies
+        The collection of policies to evaluate.
+    .PARAMETER DetailLevel
+        The level of detail to include in the results.
+    .EXAMPLE
+        $results = Test-NISTBenchmark -Policies $policies
+    #>
+    [CmdletBinding()]
     param (
-        [string]$RelativePath,
-        [string]$TargetPath
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject[]]$Policies,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Basic", "Detailed", "Comprehensive")]
+        [string]$DetailLevel = "Detailed"
     )
     
-    $fileUrl = "$baseUrl/$RelativePath"
-    $savePath = Join-Path -Path $moduleDir -ChildPath $TargetPath
-    
-    # Create directory if it doesn't exist
-    $saveDir = Split-Path -Path $savePath -Parent
-    if (-not (Test-Path -Path $saveDir)) {
-        New-Item -Path $saveDir -ItemType Directory -Force | Out-Null
+    process {
+        Write-Verbose "Evaluating Conditional Access policies against NIST SP 800-53 controls"
+        
+        # Define NIST controls relevant to Conditional Access
+        $nistControls = @{
+            'AC-2' = @(
+                @{
+                    Id = "AC-2.1"
+                    Name = "Account Management"
+                    Description = "Organization manages information system accounts, including establishing, activating, modifying, reviewing, disabling, and removing accounts."
+                    Evaluation = {
+                        param($Policies)
+                        
+                        # Look for admin management policies
+                        $adminPolicies = $Policies | Where-Object {
+                            ($_.State -eq "enabled") -and
+                            (Test-PolicyTargetsAdmins -Policy $_)
+                        }
+                        
+                        $compliant = $adminPolicies.Count -gt 0
+                        
+                        return @{
+                            Compliant = $compliant
+                            Details = $adminPolicies
+                            Reason = if ($compliant) {
+                                "Found policies targeting administrative accounts"
+                            } else {
+                                "No policies specifically targeting administrative accounts"
+                            }
+                            Recommendation = if (-not $compliant) {
+                                "Create Conditional Access policies specifically for administrative accounts"
+                            } else {
+                                $null
+                            }
+                        }
+                    }
+                },
+                @{
+                    Id = "AC-2.7"
+                    Name = "Role-Based Schemes"
+                    Description = "Organization establishes and administers privileged user accounts in accordance with a role-based access scheme."
+                    Evaluation = {
+                        param($Policies)
+                        
+                        # Look for role-specific policies
+                        $rolePolicies = $Policies | Where-Object {
+                            ($_.State -eq "enabled") -and
+                            ($null -ne $_.Conditions.Users.IncludeRoles) -and
+                            ($_.Conditions.Users.IncludeRoles.Count -gt 0)
+                        }
+                        
+                        $compliant = $rolePolicies.Count -gt 0
+                        
+                        return @{
+                            Compliant = $compliant
+                            Details = $rolePolicies
+                            Reason = if ($compliant) {
+                                "Found role-specific access policies"
+                            } else {
+                                "No role-specific access policies found"
+                            }
+                            Recommendation = if (-not $compliant) {
+                                "Create Conditional Access policies targeting specific administrative roles"
+                            } else {
+                                $null
+                            }
+                        }
+                    }
+                }
+            )
+        }
+        
+        $nistControls['AC-7'] = @(
+            @{
+                Id = "AC-7.1"
+                Name = "Unsuccessful Logon Attempts"
+                Description = "Organization enforces limit of consecutive invalid logon attempts during a specified time period."
+                Evaluation = {
+                    param($Policies)
+                    
+                    # Look for risk-based policies
+                    $riskPolicies = $Policies | Where-Object {
+                        ($_.State -eq "enabled") -and
+                        (Test-PolicyUsesRiskDetection -Policy $_ -RiskType "SignIn")
+                    }
+                    
+                    $compliant = $riskPolicies.Count -gt 0
+                    
+                    return @{
+                        Compliant = $compliant
+                        Details = $riskPolicies
+                        Reason = if ($compliant) {
+                            "Found sign-in risk-based policies"
+                        } else {
+                            "No sign-in risk-based policies found"
+                        }
+                        Recommendation = if (-not $compliant) {
+                            "Create Conditional Access policies that use sign-in risk detection"
+                        } else {
+                            $null
+                        }
+                    }
+                }
+            }
+        )
+        
+        $nistControls['AC-11'] = @(
+            @{
+                Id = "AC-11.1"
+                Name = "Session Termination"
+                Description = "Organization terminates a user session after a defined time-period of inactivity."
+                Evaluation = {
+                    param($Policies)
+                    
+                    # Look for session controls
+                    $sessionPolicies = $Policies | Where-Object {
+                        ($_.State -eq "enabled") -and
+                        (Test-PolicyHasSessionControls -Policy $_ -ControlType "SignInFrequency")
+                    }
+                    
+                    $compliant = $sessionPolicies.Count -gt 0
+                    
+                    return @{
+                        Compliant = $compliant
+                        Details = $sessionPolicies
+                        Reason = if ($compliant) {
+                            "Found session control policies"
+                        } else {
+                            "No session control policies found"
+                        }
+                        Recommendation = if (-not $compliant) {
+                            "Create Conditional Access policies with sign-in frequency controls"
+                        } else {
+                            $null
+                        }
+                    }
+                }
+            }
+        )
+        
+        # Continue with more NIST controls relevant to Conditional Access...
+        $nistControls['IA-2'] = @(
+            @{
+                Id = "IA-2.1"
+                Name = "Multifactor Authentication"
+                Description = "Organization implements multifactor authentication for access to privileged accounts."
+                Evaluation = {
+                    param($Policies)
+                    
+                    # Look for admin MFA
+                    $adminMfaPolicies = $Policies | Where-Object {
+                        ($_.State -eq "enabled") -and
+                        (Test-PolicyRequiresMFA -Policy $_) -and
+                        (Test-PolicyTargetsAdmins -Policy $_)
+                    }
+                    
+                    $compliant = $adminMfaPolicies.Count -gt 0
+                    
+                    return @{
+                        Compliant = $compliant
+                        Details = $adminMfaPolicies
+                        Reason = if ($compliant) {
+                            "Found MFA policies for administrative accounts"
+                        } else {
+                            "No MFA policies for administrative accounts found"
+                        }
+                        Recommendation = if (-not $compliant) {
+                            "Create Conditional Access policies requiring MFA for administrative accounts"
+                        } else {
+                            $null
+                        }
+                    }
+                }
+            },
+            @{
+                Id = "IA-2.2"
+                Name = "Multifactor Authentication for Non-Privileged Accounts"
+                Description = "Organization implements multifactor authentication for access to non-privileged accounts."
+                Evaluation = {
+                    param($Policies)
+                    
+                    # Look for user MFA
+                    $userMfaPolicies = $Policies | Where-Object {
+                        ($_.State -eq "enabled") -and
+                        (Test-PolicyRequiresMFA -Policy $_) -and
+                        (
+                            (Test-PolicyAppliesToAllUsers -Policy $_) -or
+                            (Test-PolicyHasBroadAppCoverage -Policy $_)
+                        )
+                    }
+                    
+                    $compliant = $userMfaPolicies.Count -gt 0
+                    
+                    return @{
+                        Compliant = $compliant
+                        Details = $userMfaPolicies
+                        Reason = if ($compliant) {
+                            "Found MFA policies for regular user accounts"
+                        } else {
+                            "No MFA policies for regular user accounts found"
+                        }
+                        Recommendation = if (-not $compliant) {
+                            "Create Conditional Access policies requiring MFA for all users"
+                        } else {
+                            $null
+                        }
+                    }
+                }
+            }
+        )
+        
+        # Evaluate each NIST control
+        $results = @()
+        
+        foreach ($controlId in $nistControls.Keys) {
+            $subResults = @()
+            $control = $nistControls[$controlId]
+            
+            foreach ($subControl in $control) {
+                try {
+                    $evaluation = & $subControl.Evaluation $Policies
+                    
+                    $subResult = [PSCustomObject]@{
+                        ControlId = $subControl.Id
+                        Name = $subControl.Name
+                        Compliant = $evaluation.Compliant
+                        Status = if ($evaluation.Compliant) { "PASS" } else { "FAIL" }
+                        Reason = $evaluation.Reason
+                        Recommendation = $evaluation.Recommendation
+                    }
+                    
+                    if ($DetailLevel -ne "Basic") {
+                        $subResult | Add-Member -MemberType NoteProperty -Name "Details" -Value $evaluation.Details
+                    }
+                    
+                    $subResults += $subResult
+                }
+                catch {
+                    Write-Warning "Error evaluating $($subControl.Id): ${_}"
+                    
+                    $subResults += [PSCustomObject]@{
+                        ControlId = $subControl.Id
+                        Name = $subControl.Name
+                        Compliant = $false
+                        Status = "ERROR"
+                        Reason = "Evaluation error: ${_}"
+                        Recommendation = "Check logs for details"
+                    }
+                }
+            }
+            
+            $controlResult = [PSCustomObject]@{
+                ControlId = $controlId
+                Name = $control[0].Name
+                Description = $control[0].Description
+                SubControls = $subResults
+                ComplianceScore = if ($subResults.Count -gt 0) {
+                    [math]::Round(($subResults.Where({ $_.Compliant -eq $true }).Count / $subResults.Count) * 100)
+                } else {
+                    0
+                }
+            }
+            
+            $results += $controlResult
+        }
+        
+        # Calculate overall score
+        $totalSubControls = ($results.SubControls | Measure-Object).Count
+        $compliantSubControls = ($results.SubControls | Where-Object { $_.Compliant -eq $true } | Measure-Object).Count
+        
+        $overallScore = if ($totalSubControls -gt 0) {
+            [math]::Round(($compliantSubControls / $totalSubControls) * 100)
+        } else {
+            0
+        }
+        
+        return [PSCustomObject]@{
+            Results = $results
+            OverallScore = $overallScore
+            CompliantControls = $compliantSubControls
+            TotalControls = $totalSubControls
+            EvaluationDate = Get-Date
+            DetailLevel = $DetailLevel
+            Framework = "NIST"
+        }
     }
-    
-    try {
-        Invoke-WebRequest -Uri $fileUrl -OutFile $savePath -UseBasicParsing
-        return $true
-    }
-    catch {
-        Write-Error "Failed to download $fileUrl. Error: $_"
-        return $false
-    }
-}
-
-# List of essential files to download
-$essentialFiles = @(
-    @{ Path = "ConditionalAccessAnalyzer.psd1"; Target = "ConditionalAccessAnalyzer.psd1" },
-    @{ Path = "ConditionalAccessAnalyzer.psm1"; Target = "ConditionalAccessAnalyzer.psm1" },
-    @{ Path = "Classes/ComplianceScore.ps1"; Target = "Classes/ComplianceScore.ps1" },
-    @{ Path = "Classes/PolicyResult.ps1"; Target = "Classes/PolicyResult.ps1" },
-    @{ Path = "Classes/ReportData.ps1"; Target = "Classes/ReportData.ps1" },
-    @{ Path = "Private/DataProcessing.ps1"; Target = "Private/DataProcessing.ps1" },
-    @{ Path = "Private/GraphHelpers.ps1"; Target = "Private/GraphHelpers.ps1" },
-    @{ Path = "Private/Logging.ps1"; Target = "Private/Logging.ps1" },
-    @{ Path = "Private/PolicyEvaluation.ps1"; Target = "Private/PolicyEvaluation.ps1" },
-    @{ Path = "Public/Analysis.ps1"; Target = "Public/Analysis.ps1" },
-    @{ Path = "Public/Connect.ps1"; Target = "Public/Connect.ps1" },
-    @{ Path = "Public/Remediation.ps1"; Target = "Public/Remediation.ps1" },
-    @{ Path = "Public/Reporting.ps1"; Target = "Public/Reporting.ps1" },
-    @{ Path = "Templates/BenchmarkAnalyzer.ps1"; Target = "Templates/BenchmarkAnalyzer.ps1" },
-    @{ Path = "Templates/CABestPracticePolicy.ps1"; Target = "Templates/CABestPracticePolicy.ps1" },
-    @{ Path = "Templates/CIS.ps1"; Target = "Templates/CIS.ps1" },
-    @{ Path = "Templates/NIST.ps1"; Target = "Templates/NIST.ps1" },
-    @{ Path = "Templates/ZeroTrust.ps1"; Target = "Templates/ZeroTrust.ps1" }
-)
-
-# Download files
-$downloadSuccess = $true
-Write-Host "Downloading module files..." -ForegroundColor Yellow
-foreach ($file in $essentialFiles) {
-    $success = Download-RepoFile -RelativePath $file.Path -TargetPath $file.Target
-    if (-not $success) {
-        $downloadSuccess = $false
-    }
-}
-
-if (-not $downloadSuccess) {
-    Write-Error "Failed to download some module files. The module might not work correctly."
-}
-else {
-    Write-Host "All module files downloaded successfully." -ForegroundColor Green
-}
-
-# Import the module
-try {
-    Import-Module "$moduleDir\ConditionalAccessAnalyzer.psd1" -Force
-    Write-Host "Conditional Access Analyzer module imported successfully." -ForegroundColor Green
-    
-    # Display help information
-    Write-Host "`nQuick Start Guide:" -ForegroundColor Cyan
-    Write-Host "1. Connect to Microsoft Graph with required permissions:"
-    Write-Host "   Connect-CAAnalyzer" -ForegroundColor Yellow
-    Write-Host "2. Run comprehensive compliance check:"
-    Write-Host "   Invoke-CAComplianceCheck" -ForegroundColor Yellow
-    Write-Host "3. Generate interactive dashboard:"
-    Write-Host "   Export-CAComplianceDashboard -IncludeBenchmarks -OpenDashboard" -ForegroundColor Yellow
-    Write-Host "`nFor more information, use: Get-Command -Module ConditionalAccessAnalyzer | Get-Help" -ForegroundColor Cyan
-    
-    # Connect to Microsoft Graph (optional)
-    $connectNow = Read-Host "Do you want to connect to Microsoft Graph now? (Y/N)"
-    if ($connectNow.ToUpper() -eq "Y") {
-        Connect-CAAnalyzer
-    }
-    
-    # Return success
-    return $true
-}
-catch {
-    Write-Error "Failed to import Conditional Access Analyzer module. Error: $_"
-    # Return failure
-    return $false
 }
