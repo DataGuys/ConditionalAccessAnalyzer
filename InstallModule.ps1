@@ -5,8 +5,8 @@
 Write-Host "Installing Conditional Access Analyzer..." -ForegroundColor Cyan
 
 # Detect if we're running in Linux/macOS or Windows
-$isWindows = $PSVersionTable.Platform -eq 'Win32NT' -or (-not (Get-Command -Name 'uname' -ErrorAction SilentlyContinue))
-$pathSeparator = if ($isWindows) { '\' } else { '/' }
+$lookWindows = $PSVersionTable.Platform -eq 'Win32NT' -or (-not (Get-Command -Name 'uname' -ErrorAction SilentlyContinue))
+$pathSeparator = if ($lookWindows) { '\' } else { '/' }
 
 # Set temporary directory for download - Use user's home directory in Cloud Shell
 $tempDir = Join-Path -Path $HOME -ChildPath "temp/CAAnalyzer" -ErrorAction Stop
@@ -44,9 +44,9 @@ $baseUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/$branch"
 # Check if running in Azure Cloud Shell or Linux
 $isCloudShell = $env:ACC_CLOUD -eq 'Azure' -or (Test-Path -Path "/home")
 $envType = if ($isCloudShell) { 
-    if ($isWindows) { "Cloud Shell (Windows)" } else { "Cloud Shell (Linux)" } 
+    if ($lookWindows) { "Cloud Shell (Windows)" } else { "Cloud Shell (Linux)" } 
 } else { 
-    if ($isWindows) { "PowerShell (Windows)" } else { "PowerShell (Linux/macOS)" }
+    if ($lookWindows) { "PowerShell (Windows)" } else { "PowerShell (Linux/macOS)" }
 }
 Write-Host "Detected environment: $envType" -ForegroundColor Yellow
 
@@ -114,7 +114,7 @@ function Download-RepoFile {
             Write-Verbose "Downloaded successfully: $RelativePath"
             
             # Fix Windows-style path separators in PS1 files if we're on Linux
-            if (-not $isWindows -and $savePath.EndsWith('.ps1')) {
+            if (-not $lookWindows -and $savePath.EndsWith('.ps1')) {
                 $content = Get-Content -Path $savePath -Raw
                 if ($content -like '*\*') {
                     $content = $content.Replace('\', '/')
@@ -225,7 +225,7 @@ if (Test-Path $analysisFile) {
     $content = Get-Content -Path $analysisFile -Raw
     
     # Fix variable expansion in string issues
-    $content = $content -replace "with ID \$Id: \$_", "with ID `${Id}: `${_}"
+    $content = $content -replace "with ID \$Id \$_", "with ID `${Id}: `${_}"
     
     # Write the fixed content back
     Set-Content -Path $analysisFile -Value $content -Force
@@ -238,7 +238,7 @@ if (Test-Path $remediationFile) {
     $content = Get-Content -Path $remediationFile -Raw
     
     # Fix variable expansion in string issues
-    $content = $content -replace "\$policyBaseName:", "`${policyBaseName}:"
+    $content = $content -replace "\$policyBaseName", "`${policyBaseName}:"
     
     # Write the fixed content back
     Set-Content -Path $remediationFile -Value $content -Force
