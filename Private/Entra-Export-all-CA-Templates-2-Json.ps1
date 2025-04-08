@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-    Exports all available Conditional Access Templates to JSON files and creates a downloadable zip archive in Azure Cloud Shell.
+    Exports all available Conditional Access Templates to JSON files with descriptive names and creates a downloadable zip archive in Azure Cloud Shell.
 .DESCRIPTION
     This script connects to Microsoft Graph API, retrieves all Conditional Access Templates,
     exports them as individual JSON files named after each template, and packages them into a zip file.
     It's specifically designed to work in Azure Cloud Shell environment.
 .NOTES
     Author: Claude
-    Version: 1.0
+    Version: 1.1
     Requires: Azure Cloud Shell, Microsoft.Graph modules
 #>
 
@@ -88,6 +88,30 @@ catch {
     exit 1
 }
 
+# Function to create a valid, descriptive filename from template name
+function Get-ValidFileName {
+    param (
+        [string]$Name,
+        [int]$Counter
+    )
+    
+    # First, replace invalid filename characters with underscores
+    $cleanName = $Name -replace '[\\\/\:\*\?\"\<\>\|]', '_'
+    
+    # Replace multiple spaces with single underscore
+    $cleanName = $cleanName -replace '\s+', '_'
+    
+    # Ensure the name isn't too long (Windows has a 260 character path limit)
+    if ($cleanName.Length -gt 180) {
+        $cleanName = $cleanName.Substring(0, 180)
+    }
+    
+    # Add counter prefix for sorting and uniqueness
+    $fileName = "{0:D3}_{1}.json" -f $Counter, $cleanName
+    
+    return $fileName
+}
+
 # Export templates to JSON files
 $exportedFiles = @()
 $counter = 0
@@ -96,11 +120,8 @@ foreach ($template in $templates.value) {
     $counter++
     
     try {
-        # Clean up template name to create a valid filename
-        $templateName = $template.displayName -replace '[\\\/\:\*\?\"\<\>\|\s]', '_'
-        
-        # Add counter to ensure unique filenames
-        $fileName = "{0:D3}_{1}.json" -f $counter, $templateName
+        # Get descriptive filename based on template display name
+        $fileName = Get-ValidFileName -Name $template.displayName -Counter $counter
         $filePath = Join-Path -Path $exportPath -ChildPath $fileName
         
         # Convert template to JSON and save to file
@@ -113,7 +134,7 @@ foreach ($template in $templates.value) {
         }
         $exportedFiles += $fileInfo
         
-        Write-Host "Exported template: $($template.displayName)" -ForegroundColor Cyan
+        Write-Host "Exported template: $($template.displayName) -> $fileName" -ForegroundColor Cyan
     }
     catch {
         Write-Host "Error exporting template '$($template.displayName)': $_" -ForegroundColor Red
@@ -182,7 +203,7 @@ Write-Host "- Zip file: $zipFilePath" -ForegroundColor White
 if ($exportedFiles.Count -gt 0) {
     Write-Host "`nFirst few exported templates:" -ForegroundColor White
     $exportedFiles | Select-Object -First 5 | ForEach-Object {
-        Write-Host "- $($_.Template)" -ForegroundColor White
+        Write-Host "- $($_.Template) -> $($_.FileName)" -ForegroundColor White
     }
     
     if ($exportedFiles.Count -gt 5) {
