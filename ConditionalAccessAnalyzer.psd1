@@ -76,22 +76,4 @@
     AliasesToExport = @()
     
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData = @{
-        PSData = @{
-            # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('EntraID', 'AzureAD', 'ConditionalAccess', 'Security', 'ZeroTrust', 'Identity')
-            
-            # A URL to the license for this module.
-            LicenseUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer/blob/main/LICENSE'
-            
-            # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer'
-            
-            # A URL to an icon representing this module.
-            IconUri = 'https://raw.githubusercontent.com/DataGuys/ConditionalAccessAnalyzer/refs/heads/main/assets/logo.png'
-            
-            # ReleaseNotes of this module
-            ReleaseNotes = 'Initial release of Conditional Access Analyzer'
-        }
-    }
-}
+    PrivateData =
