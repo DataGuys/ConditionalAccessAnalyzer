@@ -1,12 +1,16 @@
 # InstallModule.ps1
 # Installation script for Conditional Access Analyzer
-# For use with Azure Cloud Shell
+# For use with Azure Cloud Shell and PowerShell 7+ on any platform
 
 Write-Host "Installing Conditional Access Analyzer..." -ForegroundColor Cyan
 
+# Detect if we're running in Linux/macOS or Windows
+$isWindows = $PSVersionTable.Platform -eq 'Win32NT' -or (-not (Get-Command -Name 'uname' -ErrorAction SilentlyContinue))
+$pathSeparator = if ($isWindows) { '\' } else { '/' }
+
 # Set temporary directory for download - Use user's home directory in Cloud Shell
-$tempDir = Join-Path -Path $HOME -ChildPath "temp\CAAnalyzer"
-$moduleDir = Join-Path -Path $HOME -ChildPath "CAAnalyzer"
+$tempDir = Join-Path -Path $HOME -ChildPath "temp/CAAnalyzer" -ErrorAction Stop
+$moduleDir = Join-Path -Path $HOME -ChildPath "CAAnalyzer" -ErrorAction Stop
 
 # Create directories if they don't exist
 if (-not (Test-Path -Path $tempDir)) {
@@ -37,9 +41,14 @@ $repoName = "ConditionalAccessAnalyzer" # Correct repository name
 $branch = "refs/heads/main"
 $baseUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/$branch"
 
-# Check if running in Azure Cloud Shell
+# Check if running in Azure Cloud Shell or Linux
 $isCloudShell = $env:ACC_CLOUD -eq 'Azure' -or (Test-Path -Path "/home")
-Write-Host "Detected environment: $(if ($isCloudShell) { "Azure Cloud Shell" } else { "PowerShell" })"
+$envType = if ($isCloudShell) { 
+    if ($isWindows) { "Cloud Shell (Windows)" } else { "Cloud Shell (Linux)" } 
+} else { 
+    if ($isWindows) { "PowerShell (Windows)" } else { "PowerShell (Linux/macOS)" }
+}
+Write-Host "Detected environment: $envType" -ForegroundColor Yellow
 
 # Check for required modules
 $requiredModules = @(
@@ -81,7 +90,10 @@ function Download-RepoFile {
     )
     
     $fileUrl = "$baseUrl/$RelativePath"
-    $savePath = Join-Path -Path $moduleDir -ChildPath $TargetPath
+    $savePath = Join-Path -Path $moduleDir -ChildPath $TargetPath -ErrorAction Stop
+    
+    # Normalize path to use correct separators
+    $savePath = $savePath.Replace('\', $pathSeparator)
     
     # Create directory if it doesn't exist
     $saveDir = Split-Path -Path $savePath -Parent
@@ -100,6 +112,27 @@ function Download-RepoFile {
         Invoke-WebRequest -Uri $fileUrl -OutFile $savePath -UseBasicParsing
         if (Test-Path -Path $savePath) {
             Write-Verbose "Downloaded successfully: $RelativePath"
+            
+            # Fix Windows-style path separators in PS1 files if we're on Linux
+            if (-not $isWindows -and $savePath.EndsWith('.ps1')) {
+                $content = Get-Content -Path $savePath -Raw
+                if ($content -like '*\*') {
+                    $content = $content.Replace('\', '/')
+                    Set-Content -Path $savePath -Value $content -Force
+                    Write-Verbose "Fixed path separators in $savePath"
+                }
+                
+                # Fix other common issues in PowerShell files for Linux
+                $content = Get-Content -Path $savePath -Raw
+                
+                # Fix variable references with colons (common in error messages)
+                if ($content -like '*$_*') {
+                    $content = $content.Replace('$_', '${_}')
+                    Set-Content -Path $savePath -Value $content -Force
+                    Write-Verbose "Fixed variable references in $savePath"
+                }
+            }
+            
             return $true
         } else {
             Write-Error "File downloaded but not found on disk: $savePath"
@@ -151,6 +184,67 @@ foreach ($file in $essentialFiles) {
 }
 Write-Progress -Activity "Downloading Module Files" -Completed
 
+# Fix common PowerShell syntax issues in all module files
+Write-Host "Applying PowerShell compatibility fixes..." -ForegroundColor Yellow
+
+# Fix hashtable syntax issues in BenchmarkAnalyzer.ps1
+$benchmarkFile = Join-Path -Path $moduleDir -ChildPath "Templates/BenchmarkAnalyzer.ps1"
+if (Test-Path $benchmarkFile) {
+    $content = Get-Content -Path $benchmarkFile -Raw
+    
+    # Fix hashtable syntax (issue with assignment operators in hashtables)
+    $content = $content -replace "'NIST' = @\(", "'NIST' = @("
+    $content = $content -replace "'CIS' = @\(", "'CIS' = @("
+    $content = $content -replace "'MCRA' = @\(", "'MCRA' = @("
+    $content = $content -replace "'ISO27001' = @\(", "'ISO27001' = @("
+    $content = $content -replace "'PCI' = @\(", "'PCI' = @("
+    $content = $content -replace "'HIPAA' = @\(", "'HIPAA' = @("
+    
+    # Write the fixed content back
+    Set-Content -Path $benchmarkFile -Value $content -Force
+    Write-Host "  ✓ Fixed BenchmarkAnalyzer.ps1 hashtable syntax" -ForegroundColor Green
+}
+
+# Fix ComplianceScore.ps1 issues
+$scoreFile = Join-Path -Path $moduleDir -ChildPath "Classes/ComplianceScore.ps1"
+if (Test-Path $scoreFile) {
+    $content = Get-Content -Path $scoreFile -Raw
+    
+    # Fix method return issues
+    $content = $content -replace "\[string\] GetColor\(\) \{", "[string] GetColor() { return "
+    $content = $content -replace "\[string\] GetTextColor\(\) \{", "[string] GetTextColor() { return "
+    
+    # Write the fixed content back
+    Set-Content -Path $scoreFile -Value $content -Force
+    Write-Host "  ✓ Fixed ComplianceScore.ps1 method return issues" -ForegroundColor Green
+}
+
+# Fix Analysis.ps1 issues
+$analysisFile = Join-Path -Path $moduleDir -ChildPath "Public/Analysis.ps1"
+if (Test-Path $analysisFile) {
+    $content = Get-Content -Path $analysisFile -Raw
+    
+    # Fix variable expansion in string issues
+    $content = $content -replace "with ID \$Id: \$_", "with ID `${Id}: `${_}"
+    
+    # Write the fixed content back
+    Set-Content -Path $analysisFile -Value $content -Force
+    Write-Host "  ✓ Fixed Analysis.ps1 variable expansion issues" -ForegroundColor Green
+}
+
+# Fix Remediation.ps1 issues
+$remediationFile = Join-Path -Path $moduleDir -ChildPath "Public/Remediation.ps1"
+if (Test-Path $remediationFile) {
+    $content = Get-Content -Path $remediationFile -Raw
+    
+    # Fix variable expansion in string issues
+    $content = $content -replace "\$policyBaseName:", "`${policyBaseName}:"
+    
+    # Write the fixed content back
+    Set-Content -Path $remediationFile -Value $content -Force
+    Write-Host "  ✓ Fixed Remediation.ps1 variable expansion issues" -ForegroundColor Green
+}
+
 if (-not $downloadSuccess) {
     Write-Error "Failed to download some module files. The module might not work correctly."
 }
@@ -181,11 +275,11 @@ try {
         Connect-CAAnalyzer
     }
     
-    # Return success
     return $true
 }
 catch {
     Write-Error "Failed to import Conditional Access Analyzer module. Error: $_"
-    # Return failure
+    Write-Host "More details:"
+    Write-Host $_.ScriptStackTrace
     return $false
 }
