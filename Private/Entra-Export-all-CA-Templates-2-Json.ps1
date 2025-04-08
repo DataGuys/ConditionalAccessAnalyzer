@@ -3,11 +3,11 @@
     Exports all available Conditional Access Templates to JSON files with descriptive names and creates a downloadable zip archive in Azure Cloud Shell.
 .DESCRIPTION
     This script connects to Microsoft Graph API, retrieves all Conditional Access Templates,
-    exports them as individual JSON files named after each template, and packages them into a zip file.
-    It's specifically designed to work in Azure Cloud Shell environment.
+    exports them as individual JSON files with descriptive names based on template content,
+    and packages them into a zip file. It's designed to work reliably in Azure Cloud Shell.
 .NOTES
     Author: Claude
-    Version: 1.1
+    Version: 2.0
     Requires: Azure Cloud Shell, Microsoft.Graph modules
 #>
 
@@ -88,7 +88,73 @@ catch {
     exit 1
 }
 
-# Function to create a valid, descriptive filename from template name
+# Function to extract a descriptive name from template content
+function Get-TemplateDescriptiveName {
+    param (
+        [PSCustomObject]$Template
+    )
+    
+    # Try to use displayName if it exists and isn't empty
+    if (-not [string]::IsNullOrWhiteSpace($Template.displayName)) {
+        return $Template.displayName
+    }
+    
+    # Try to get name from the controls or details
+    if ($Template.details -and $Template.details.displayName) {
+        return $Template.details.displayName
+    }
+    
+    # Check for description
+    if (-not [string]::IsNullOrWhiteSpace($Template.description)) {
+        # Limit description length as a filename
+        if ($Template.description.Length -gt 50) {
+            return $Template.description.Substring(0, 50) + "..."
+        }
+        return $Template.description
+    }
+    
+    # Try to derive a name from policy grant controls if available
+    if ($Template.details -and $Template.details.grantControls) {
+        $controls = @()
+        
+        if ($Template.details.grantControls.builtInControls) {
+            foreach ($control in $Template.details.grantControls.builtInControls) {
+                $controls += $control
+            }
+        }
+        
+        if ($controls.Count -gt 0) {
+            return "Template_With_" + ($controls -join "_")
+        }
+    }
+    
+    # Try to find target application names
+    if ($Template.details -and $Template.details.conditions -and $Template.details.conditions.applications -and 
+        $Template.details.conditions.applications.includeApplications) {
+        $apps = $Template.details.conditions.applications.includeApplications
+        if ($apps.Count -gt 0 -and $apps[0] -ne "All" -and $apps[0] -ne "None" -and $apps.Count -le 3) {
+            return "Template_For_" + ($apps -join "_")
+        }
+        elseif ($apps.Count -gt 0 -and ($apps[0] -eq "All" -or $apps[0] -eq "None")) {
+            return "Template_For_" + $apps[0] + "_Apps"
+        }
+    }
+    
+    # Check if there's an ID we can use
+    if (-not [string]::IsNullOrWhiteSpace($Template.id)) {
+        # Use last part of ID which might be more distinctive
+        $idParts = $Template.id -split '-'
+        if ($idParts.Count -gt 0) {
+            return "Template_ID_" + $idParts[-1]
+        }
+        return "Template_ID_" + $Template.id.Substring($Template.id.Length - 8)
+    }
+    
+    # Fallback to a generic name
+    return "Conditional_Access_Template"
+}
+
+# Function to create a valid filename
 function Get-ValidFileName {
     param (
         [string]$Name,
@@ -98,8 +164,9 @@ function Get-ValidFileName {
     # First, replace invalid filename characters with underscores
     $cleanName = $Name -replace '[\\\/\:\*\?\"\<\>\|]', '_'
     
-    # Replace multiple spaces with single underscore
+    # Replace multiple spaces or underscores with single underscore
     $cleanName = $cleanName -replace '\s+', '_'
+    $cleanName = $cleanName -replace '_{2,}', '_'
     
     # Ensure the name isn't too long (Windows has a 260 character path limit)
     if ($cleanName.Length -gt 180) {
@@ -120,8 +187,11 @@ foreach ($template in $templates.value) {
     $counter++
     
     try {
-        # Get descriptive filename based on template display name
-        $fileName = Get-ValidFileName -Name $template.displayName -Counter $counter
+        # Get descriptive name based on template content
+        $descriptiveName = Get-TemplateDescriptiveName -Template $template
+        
+        # Create valid filename
+        $fileName = Get-ValidFileName -Name $descriptiveName -Counter $counter
         $filePath = Join-Path -Path $exportPath -ChildPath $fileName
         
         # Convert template to JSON and save to file
@@ -130,14 +200,14 @@ foreach ($template in $templates.value) {
         $fileInfo = [PSCustomObject]@{
             FileName = $fileName
             FilePath = $filePath
-            Template = $template.displayName
+            Template = $descriptiveName
         }
         $exportedFiles += $fileInfo
         
-        Write-Host "Exported template: $($template.displayName) -> $fileName" -ForegroundColor Cyan
+        Write-Host "Exported template: $descriptiveName -> $fileName" -ForegroundColor Cyan
     }
     catch {
-        Write-Host "Error exporting template '$($template.displayName)': $_" -ForegroundColor Red
+        Write-Host "Error exporting template #$counter: $_" -ForegroundColor Red
     }
 }
 
