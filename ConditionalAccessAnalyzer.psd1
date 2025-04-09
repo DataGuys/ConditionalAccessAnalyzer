@@ -1,9 +1,9 @@
 @{
-    # Script module or binary module file associated with this manifest.
+    # Script module or binary module file associated with this manifest
     RootModule = 'ConditionalAccessAnalyzer.psm1'
     
-    # Version number of this module.
-    ModuleVersion = '1.0.0'
+    # Version number of this module (format: major.minor.build.revision)
+    ModuleVersion = '1.1.0'
     
     # ID used to uniquely identify this module
     GUID = '48b10e1c-2a42-4b73-8f85-d9a8f6e3a2d9'
@@ -43,13 +43,15 @@
         }
     )
     
-    # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
+    # Functions to export from this module
     FunctionsToExport = @(
+        # Connection functions
         'Connect-CAAnalyzer',
         'Disconnect-CAAnalyzer',
         'Test-CAAnalyzerConnection',
+        
+        # Analysis functions
         'Invoke-CAComplianceCheck',
-        'Export-CAComplianceReport',
         'Get-CAPoliciesSummary',
         'Test-AdminMFARequired',
         'Test-UserMFARequired',
@@ -58,37 +60,57 @@
         'Test-RiskBasedPolicies',
         'Test-MAMPolicies',
         'Test-ZeroTrustNetwork',
+        
+        # Reporting functions
+        'Export-CAComplianceReport',
+        'Export-CAComplianceDashboard',
+        
+        # Remediation functions
         'Invoke-CAComplianceRemediation',
         'Set-CAEmergencyAccess',
         'Set-CAStaggeredRollout',
         'New-CABestPracticePolicy',
+        
+        # Benchmark functions
         'Test-CASecurityBenchmark',
-        'Export-CAComplianceDashboard'
+        'Test-CISBenchmark',
+        'Test-NISTBenchmark'
     )
     
-    # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
+    # Cmdlets to export from this module
     CmdletsToExport = @()
     
     # Variables to export from this module
     VariablesToExport = '*'
     
-    # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
+    # Aliases to export from this module
     AliasesToExport = @()
     
-        # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-        PrivateData = @{
-            PSData = @{
-                # Tags applied to this module
-                Tags = @('ConditionalAccess', 'Security', 'EntraID', 'AzureAD')
-                
-                # A URL to the license for this module
-                # LicenseUri = ''
-                
-                # A URL to the main website for this project
-                # ProjectUri = ''
-                
-                # ReleaseNotes of this module
-                ReleaseNotes = 'Initial release of the ConditionalAccessAnalyzer module.'
-            }
+    # Private data to pass to the module specified in RootModule/ModuleToProcess
+    PrivateData = @{
+        PSData = @{
+            # Tags applied to this module
+            Tags = @('ConditionalAccess', 'Security', 'EntraID', 'AzureAD', 'MicrosoftGraph', 'ZeroTrust')
+            
+            # A URL to the license for this module
+            LicenseUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer/blob/main/LICENSE'
+            
+            # A URL to the main website for this project
+            ProjectUri = 'https://github.com/DataGuys/ConditionalAccessAnalyzer'
+            
+            # ReleaseNotes of this module
+            ReleaseNotes = @'
+## 1.1.0
+- Added support for Azure Cloud Shell
+- Improved cross-platform compatibility
+- Added template deployment utility
+- Enhanced benchmark assessments
+
+## 1.0.0 
+- Initial release with core functionality
+- Support for compliance checks and remediation
+- NIST and CIS benchmark evaluations
+'@
         }
     }
+}
