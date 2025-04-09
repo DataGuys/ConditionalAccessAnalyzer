@@ -580,10 +580,31 @@ function Test-ZeroTrustNetwork {
     param()
     
     process {
-        # Implementation details
+        $policies = Get-MgIdentityConditionalAccessPolicy
+        
+        $mdcaPolicies = $policies | Where-Object {
+            ($_.State -eq "enabled") -and
+            (Test-PolicyHasSessionControls -Policy $_ -ControlType "CloudAppSecurity")
+        }
+        
+        $gsaPolicies = $policies | Where-Object {
+            ($_.State -eq "enabled") -and
+            ($_.DisplayName -like "*Global Secure Access*" -or $_.DisplayName -like "*Zero Trust*")
+        }
+        
+        $mdcaIntegrated = $mdcaPolicies.Count -gt 0
+        $gsaConfigured = $gsaPolicies.Count -gt 0
+        
         return [PSCustomObject]@{
-            MDCAIntegrated = $false # Placeholder
-            GlobalSecureAccessConfigured = $false # Placeholder
-            MDCAPolicies = @()
-            GSAPolicies = @()
-            Recommendation = "Configure Zero Trust
+            MDCAIntegrated = $mdcaIntegrated
+            GlobalSecureAccessConfigured = $gsaConfigured
+            MDCAPolicies = $mdcaPolicies
+            GSAPolicies = $gsaPolicies
+            Recommendation = if (-not ($mdcaIntegrated -and $gsaConfigured)) {
+                "Configure Zero Trust Network Access controls through MDCA integration and Global Secure Access"
+            } else {
+                $null
+            }
+        }
+    }
+}
