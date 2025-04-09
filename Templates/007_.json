@@ -1,0 +1,80 @@
+{
+  "description": "Require multifactor authentication if the sign-in risk is detected to be medium or high. (Requires a Microsoft Entra ID P2 license)",
+  "details": {
+    "sessionControls": {
+      "disableResilienceDefaults": null,
+      "globalSecureAccessFilteringProfile": null,
+      "applicationEnforcedRestrictions": null,
+      "cloudAppSecurity": null,
+      "continuousAccessEvaluation": null,
+      "signInFrequency": {
+        "type": null,
+        "value": null,
+        "frequencyInterval": "everyTime",
+        "isEnabled": true,
+        "authenticationType": "primaryAndSecondaryAuthentication"
+      },
+      "secureSignInSession": null,
+      "persistentBrowser": null,
+      "networkAccessSecurity": null
+    },
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "mfa"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('6b619f55-792e-45dc-9711-d83ec9d7ae90')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [
+        "high",
+        "medium"
+      ],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "All"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Require multifactor authentication for risky sign-ins",
+  "id": "6b619f55-792e-45dc-9711-d83ec9d7ae90",
+  "scenarios": "zeroTrust,remoteWork"
+}

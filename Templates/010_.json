@@ -1,0 +1,73 @@
+{
+  "description": "Users will be blocked from accessing company resources when the device type is unknown or unsupported.",
+  "details": {
+    "sessionControls": null,
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "block"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('4e39a309-931e-4cb1-a371-e2beea168002')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "All"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": {
+        "includePlatforms": [
+          "all"
+        ],
+        "excludePlatforms": [
+          "android",
+          "iOS",
+          "windows",
+          "macOS",
+          "linux",
+          "windowsPhone"
+        ]
+      },
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Block access for unknown or unsupported device platform",
+  "id": "4e39a309-931e-4cb1-a371-e2beea168002",
+  "scenarios": "zeroTrust,remoteWork"
+}

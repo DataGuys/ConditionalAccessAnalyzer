@@ -1,0 +1,61 @@
+{
+  "description": "Require multifactor authentication to protect privileged access to Azure management.",
+  "details": {
+    "sessionControls": null,
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "mfa"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('d8c51a9a-e6b1-454d-86af-554e7872e2c1')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Require multifactor authentication for Azure management",
+  "id": "d8c51a9a-e6b1-454d-86af-554e7872e2c1",
+  "scenarios": "secureFoundation,zeroTrust,protectAdmins"
+}

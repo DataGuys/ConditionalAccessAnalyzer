@@ -1,0 +1,64 @@
+{
+  "description": "Block or limit access to O365 apps, including SharePoint Online, OneDrive, and Exchange Online content. This policy requires SharePoint admin center configuration.",
+  "details": {
+    "sessionControls": {
+      "disableResilienceDefaults": null,
+      "globalSecureAccessFilteringProfile": null,
+      "applicationEnforcedRestrictions": {
+        "isEnabled": true
+      },
+      "cloudAppSecurity": null,
+      "continuousAccessEvaluation": null,
+      "signInFrequency": null,
+      "secureSignInSession": null,
+      "persistentBrowser": null,
+      "networkAccessSecurity": null
+    },
+    "grantControls": null,
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "Office365"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Use application enforced restrictions for O365 apps",
+  "id": "81fd2072-4876-42b6-8157-c6000693046b",
+  "scenarios": "remoteWork"
+}

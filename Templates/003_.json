@@ -1,0 +1,62 @@
+{
+  "description": "Block legacy authentication endpoints that can be used to bypass multifactor authentication.",
+  "details": {
+    "sessionControls": null,
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "block"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('0b2282f9-2862-4178-88b5-d79340b36cb8')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "exchangeActiveSync",
+        "other"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "All"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Block legacy authentication",
+  "id": "0b2282f9-2862-4178-88b5-d79340b36cb8",
+  "scenarios": "secureFoundation,zeroTrust,remoteWork,protectAdmins"
+}

@@ -1,0 +1,64 @@
+{
+  "description": "Configure insider risk as a condition to identify potential risky behavior (Requires a Microsoft Entra ID P2 license).",
+  "details": {
+    "sessionControls": null,
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "block"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('16aaa400-bfdf-4756-a420-ad2245d4cde8')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": "elevated",
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": {
+          "guestOrExternalUserTypes": "b2bDirectConnectUser,otherExternalUser,serviceProvider",
+          "externalTenants": null
+        },
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "Office365"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Block access to Office365 apps for users with insider risk",
+  "id": "16aaa400-bfdf-4756-a420-ad2245d4cde8",
+  "scenarios": "zeroTrust"
+}

@@ -1,0 +1,79 @@
+{
+  "description": "Require the user to change their password if the user risk is detected to be high. (Requires a Microsoft Entra ID P2 license)",
+  "details": {
+    "sessionControls": {
+      "disableResilienceDefaults": null,
+      "globalSecureAccessFilteringProfile": null,
+      "applicationEnforcedRestrictions": null,
+      "cloudAppSecurity": null,
+      "continuousAccessEvaluation": null,
+      "signInFrequency": {
+        "type": null,
+        "value": null,
+        "frequencyInterval": "everyTime",
+        "isEnabled": true,
+        "authenticationType": "primaryAndSecondaryAuthentication"
+      },
+      "secureSignInSession": null,
+      "persistentBrowser": null,
+      "networkAccessSecurity": null
+    },
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "AND",
+      "builtInControls": [
+        "MfaAndChangePassword"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('634b6de7-c38d-4357-a2c7-3842706eedd7')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "All"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [
+        "high"
+      ],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Require password change for high-risk users",
+  "id": "634b6de7-c38d-4357-a2c7-3842706eedd7",
+  "scenarios": "zeroTrust,remoteWork"
+}

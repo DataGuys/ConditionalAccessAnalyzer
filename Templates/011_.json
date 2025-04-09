@@ -1,0 +1,80 @@
+{
+  "description": "Protect user access on unmanaged devices by preventing browser sessions from remaining signed in after the browser is closed and setting a sign-in frequency to 1 hour.",
+  "details": {
+    "sessionControls": {
+      "disableResilienceDefaults": null,
+      "globalSecureAccessFilteringProfile": null,
+      "applicationEnforcedRestrictions": null,
+      "cloudAppSecurity": null,
+      "continuousAccessEvaluation": null,
+      "signInFrequency": {
+        "type": "hours",
+        "value": 1,
+        "frequencyInterval": "timeBased",
+        "isEnabled": true,
+        "authenticationType": "primaryAndSecondaryAuthentication"
+      },
+      "secureSignInSession": null,
+      "persistentBrowser": {
+        "isEnabled": true,
+        "mode": "never"
+      },
+      "networkAccessSecurity": null
+    },
+    "grantControls": null,
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [],
+        "excludeUsers": [
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "clientApplications": null,
+      "devices": {
+        "deviceFilter": {
+          "mode": "include",
+          "rule": "device.trustType -ne \"ServerAD\" -or device.isCompliant -ne True"
+        },
+        "excludeDeviceStates": [],
+        "includeDevices": [],
+        "excludeDevices": [],
+        "includeDeviceStates": []
+      },
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "locations": null,
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [
+          "All"
+        ],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "No persistent browser session",
+  "id": "62e51ccc-c9c3-4554-ac70-066172c81007",
+  "scenarios": "zeroTrust,remoteWork"
+}

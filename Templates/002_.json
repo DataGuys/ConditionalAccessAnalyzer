@@ -1,0 +1,71 @@
+{
+  "description": "Secure when and how users register for Azure AD multifactor authentication and self-service password reset.",
+  "details": {
+    "sessionControls": null,
+    "grantControls": {
+      "termsOfUse": [],
+      "operator": "OR",
+      "builtInControls": [
+        "mfa"
+      ],
+      "authenticationStrength": null,
+      "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#identity/conditionalAccess/templates('b8bda7f8-6584-4446-bce9-d871480e53fa')/details/grantControls/authenticationStrength/$entity",
+      "customAuthenticationFactors": []
+    },
+    "conditions": {
+      "authenticationFlows": null,
+      "clientAppTypes": [
+        "all"
+      ],
+      "devices": null,
+      "clientApplications": null,
+      "times": null,
+      "insiderRiskLevels": null,
+      "signInRiskLevels": [],
+      "users": {
+        "excludeGroups": [],
+        "includeUsers": [
+          "All"
+        ],
+        "includeGuestsOrExternalUsers": null,
+        "excludeGuestsOrExternalUsers": null,
+        "excludeRoles": [
+          "62e90394-69f5-4237-9190-012177145e10"
+        ],
+        "excludeUsers": [
+          "GuestsOrExternalUsers",
+          "Current administrator will be excluded"
+        ],
+        "includeGroups": [],
+        "includeRoles": []
+      },
+      "locations": {
+        "includeLocations": [
+          "All"
+        ],
+        "excludeLocations": [
+          "AllTrusted"
+        ]
+      },
+      "applications": {
+        "applicationFilter": null,
+        "includeUserActions": [
+          "urn:user:registersecurityinfo"
+        ],
+        "globalSecureAccess": null,
+        "networkAccess": null,
+        "excludeApplications": [],
+        "includeApplications": [],
+        "includeAuthenticationContextClassReferences": []
+      },
+      "platforms": null,
+      "deviceStates": null,
+      "clients": null,
+      "userRiskLevels": [],
+      "servicePrincipalRiskLevels": []
+    }
+  },
+  "name": "Securing security info registration",
+  "id": "b8bda7f8-6584-4446-bce9-d871480e53fa",
+  "scenarios": "secureFoundation,zeroTrust,remoteWork"
+}
