@@ -4,18 +4,18 @@ $Script:CAAnalyzerLogPath = "$env:TEMP/ConditionalAccessAnalyzer.log"
 $Script:CAAnalyzerDebug = $false
 $Script:ApplicationCache = @{}
 
-# Detect Azure Cloud Shell and adapt paths accordingly
+# Detect environment and adapt paths
 if ($env:ACC_CLOUD -eq 'Azure' -or (Test-Path -Path "/home/azureuser" -ErrorAction SilentlyContinue)) {
     $Script:IsCloudShell = $true
     $Script:CAAnalyzerLogPath = "$HOME/CAAnalyzer.log"
 }
 
-# Detect if we're running in Linux/macOS or Windows for path handling
+# Detect OS for path handling
 $Script:IsWindows = $PSVersionTable.Platform -eq 'Win32NT' -or (-not (Get-Command -Name 'uname' -ErrorAction SilentlyContinue))
 $Script:PathSeparator = if ($Script:IsWindows) { '\' } else { '/' }
 #endregion
 
-#region Path Handling Function
+#region Helper Functions
 function Get-NormalizedPath {
     [CmdletBinding()]
     param (
@@ -42,149 +42,114 @@ function Get-NormalizedPath {
     
     return $normalizedPath
 }
-#endregion
 
-#region Import Classes
-$classFiles = @(
-    "Classes/ComplianceScore.ps1",
-    "Classes/PolicyResult.ps1",
-    "Classes/ReportData.ps1"
-)
-
-foreach ($file in $classFiles) {
-    $filePath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $file)
-    if (Test-Path -Path $filePath) {
+function Import-ModuleFile {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+    
+    $resolvedPath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $FilePath)
+    if (Test-Path -Path $resolvedPath) {
         try {
-            . $filePath
-            Write-Verbose "Imported class file: $filePath"
+            . $resolvedPath
+            Write-Verbose "Imported file: $resolvedPath"
+            return $true
         }
         catch {
-            Write-Error "Failed to import class file $filePath : $_"
+            Write-Error "Failed to import file $resolvedPath : $_"
+            return $false
         }
     }
     else {
-        Write-Warning "Class file $filePath not found"
-    }
-}
-#endregion
-
-#region Import Private Functions
-$privateFunctions = @(
-    "Private/Logging.ps1",
-    "Private/GraphHelpers.ps1",
-    "Private/DataProcessing.ps1",
-    "Private/PolicyEvaluation.ps1"
-)
-
-foreach ($function in $privateFunctions) {
-    $functionPath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $function)
-    if (Test-Path -Path $functionPath) {
-        try {
-            . $functionPath
-            Write-Verbose "Imported private function: $functionPath"
-        }
-        catch {
-            Write-Error "Failed to import function from $functionPath : $_"
-        }
-    }
-    else {
-        Write-Warning "Function file $functionPath not found"
-    }
-}
-#endregion
-
-#region Import Public Functions
-$publicFunctions = @(
-    "Public/Connect.ps1",
-    "Public/Analysis.ps1",
-    "Public/Reporting.ps1",
-    "Public/Remediation.ps1"
-)
-
-foreach ($function in $publicFunctions) {
-    $functionPath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $function)
-    if (Test-Path -Path $functionPath) {
-        try {
-            . $functionPath
-            Write-Verbose "Imported public function: $functionPath"
-        }
-        catch {
-            Write-Error "Failed to import function from $functionPath : $_"
-        }
-    }
-    else {
-        Write-Warning "Function file $functionPath not found"
-    }
-}
-#endregion
-
-#region Import Template Files
-$templateFiles = @(
-    "Templates/CABestPracticePolicy.ps1",
-    "Templates/BenchmarkAnalyzer.ps1",
-    "Templates/CIS.ps1",
-    "Templates/NIST.ps1",
-    "Templates/ZeroTrust.ps1"
-)
-
-foreach ($template in $templateFiles) {
-    $templatePath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $template)
-    if (Test-Path -Path $templatePath) {
-        try {
-            . $templatePath
-            Write-Verbose "Imported template file: $templatePath"
-        }
-        catch {
-            Write-Error "Failed to import template from $templatePath : $_"
-        }
-    }
-    else {
-        Write-Warning "Template file $templatePath not found"
+        Write-Warning "File not found: $resolvedPath"
+        return $false
     }
 }
 #endregion
 
 #region Module Initialization
-Write-Verbose "Initializing Conditional Access Analyzer Module v1.1.0"
+Write-Verbose "Initializing Conditional Access Analyzer Module"
 
-# Initialize logging
-Write-Verbose "Configuring log path: $Script:CAAnalyzerLogPath"
-Initialize-CALogging -LogPath $Script:CAAnalyzerLogPath
-
-# Platform information
-if ($Script:IsCloudShell) {
-    Write-Verbose "Running in Azure Cloud Shell environment"
-} else {
-    Write-Verbose "Running in standard PowerShell environment"
-}
-
-if ($Script:IsWindows) {
-    Write-Verbose "Detected Windows platform"
-} else {
-    Write-Verbose "Detected Unix/Linux platform"
-}
-
-# Export public functions
-$publicFunctionsList = @()
-foreach ($function in $publicFunctions) {
-    $functionName = (Split-Path -Path $function -Leaf).Replace('.ps1', '')
-    $commands = Get-Command -CommandType Function -Module $MyInvocation.MyCommand.ModuleName | Where-Object { $_.Name -like "$functionName*" }
-    foreach ($command in $commands) {
-        $publicFunctionsList += $command.Name
+# Create ordered list of file categories to import
+$fileCategories = @(
+    @{
+        Name = "Classes"
+        Pattern = "Classes/*.ps1"
+        Required = $true
+    },
+    @{
+        Name = "Private Functions" 
+        Pattern = "Private/*.ps1"
+        Required = $true
+    },
+    @{
+        Name = "Public Functions"
+        Pattern = "Public/*.ps1" 
+        Required = $true
+    },
+    @{
+        Name = "Templates"
+        Pattern = "Templates/*.ps1"
+        Required = $false
     }
-}
+)
 
-# Add template exported functions
-$templateFunctionsList = @()
-foreach ($template in $templateFiles) {
-    $templateName = (Split-Path -Path $template -Leaf).Replace('.ps1', '')
-    $commands = Get-Command -CommandType Function -Module $MyInvocation.MyCommand.ModuleName | Where-Object { $_.Name -like "Test-*Benchmark" -or $_.Name -eq "New-CABestPracticePolicy" }
-    foreach ($command in $commands) {
-        if (-not ($templateFunctionsList -contains $command.Name)) {
-            $templateFunctionsList += $command.Name
+# Import files by category
+$importedFiles = @()
+$failedFiles = @()
+
+foreach ($category in $fileCategories) {
+    Write-Verbose "Importing $($category.Name)..."
+    $files = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath $category.Pattern) -ErrorAction SilentlyContinue
+    
+    if ($files.Count -eq 0 -and $category.Required) {
+        Write-Warning "No files found in required category: $($category.Name)"
+    }
+    
+    foreach ($file in $files) {
+        $relativePath = Get-NormalizedPath -Path $file.FullName -Relative
+        $success = Import-ModuleFile -FilePath $relativePath
+        
+        if ($success) {
+            $importedFiles += $relativePath
+        }
+        else {
+            $failedFiles += $relativePath
+            if ($category.Required) {
+                Write-Error "Failed to import required file: $relativePath"
+            }
         }
     }
 }
 
-Export-ModuleMember -Function ($publicFunctionsList + $templateFunctionsList)
+# Initialize logging
+$logDir = Split-Path -Path $Script:CAAnalyzerLogPath -Parent
+if (-not (Test-Path -Path $logDir -PathType Container)) {
+    try {
+        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+    }
+    catch {
+        Write-Warning "Failed to create log directory: $_"
+    }
+}
+
+# Export public functions
+$publicFunctions = Get-Command -CommandType Function -Module $MyInvocation.MyCommand.ModuleName
+
+# Additional function categories
+$connectFunctions = $publicFunctions | Where-Object { $_.Name -like "Connect-*" -or $_.Name -like "Disconnect-*" -or $_.Name -like "Test-*Connection" }
+$analysisFunctions = $publicFunctions | Where-Object { $_.Name -like "Get-*" -or $_.Name -like "Test-*" -or $_.Name -like "Invoke-*" }
+$reportingFunctions = $publicFunctions | Where-Object { $_.Name -like "Export-*" -or $_.Name -like "ConvertTo-*" }
+$remediationFunctions = $publicFunctions | Where-Object { $_.Name -like "New-*" -or $_.Name -like "Set-*" }
+$templateFunctions = $publicFunctions | Where-Object { $_.Name -like "Deploy-*" -or $_.Name -eq "Save-CABenchmark" -or $_.Name -eq "Get-CATemplateList" }
+
+# Export all public functions
+Export-ModuleMember -Function $publicFunctions.Name
+
+# Display initialization summary
+Write-Verbose "Conditional Access Analyzer Module initialized"
+Write-Verbose "Imported $($importedFiles.Count) files, $($failedFiles.Count) failed"
+Write-Verbose "Exported $($publicFunctions.Count) public functions"
 #endregion
