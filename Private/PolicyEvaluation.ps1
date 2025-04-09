@@ -299,7 +299,7 @@ function Test-PolicyHasBroadAppCoverage {
     }
 }
 
-function Evaluate-PolicyEffectiveness {
+function Measure-PolicyEffectiveness {
     <#
     .SYNOPSIS
         Evaluates the overall effectiveness of a Conditional Access policy.

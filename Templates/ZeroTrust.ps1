@@ -528,7 +528,7 @@ function Get-ZeroTrustJourneyStage {
                     }
                     
                     # Stage 1 requires at least admin MFA
-                    return $adminMfaPolicies.Count -gt 0
+                    return ($adminMfaPolicies.Count -gt 0) -and ($userMfaPolicies.Count -gt 0)
                 }
                 NextSteps = "Implement risk-based policies and device compliance requirements"
             },

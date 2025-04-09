@@ -43,8 +43,9 @@ $results | Export-Csv -Path 'AzureADRolesByUser.csv' -NoTypeInformation
 # Create App Registration without identifierUri
 $appName = "NamedLocationApp"
 $app = New-AzureADApplication -DisplayName $appName
-$appget = Get-AzureADApplication -SearchString $appName
+# No need to search for the app we just created
 $graphApp = Get-AzureADServicePrincipal -Filter "displayName eq 'Microsoft Graph'"
+$AppObjectID = $app.ObjectId  # Store the ObjectId for later use
 
 #Directory Roles List
 $RolesList = 'AdministrativeUnit.Read.All',
@@ -59,29 +60,31 @@ $RolesList = 'AdministrativeUnit.Read.All',
 'User.Read.All',
 'UserAuthenticationMethod.Read.All'
 
-# Assuming you want "Directory.Read.All" permission
-$permission = $graphApp.AppRoles | Where-Object { $_.Value -eq "Directory.Read.All" } | Select-Object -First 1
-$permissionReq = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-$permissionReq.ResourceAppId = $graphApp.AppId
-$permissionReq.ResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList $permission.Id, "Role"
+# Create a collection of required permissions
+$requiredResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
+$requiredResourceAccess.ResourceAppId = $graphApp.AppId
+$requiredResourceAccess.ResourceAccess = @()
 
-$app = Set-AzureADApplication -ObjectId $appget.ObjectId -RequiredResourceAccess $permissionReq
-
-# Assuming you want "policy.Read.All" permission
-$permission = $graphApp.AppRoles | Where-Object { $_.Value -eq "Policy.Read.All" } | Select-Object -First 1
-$permissionReq = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-$permissionReq.ResourceAppId = $graphApp.AppId
-$permissionReq.ResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList $permission.Id, "Role"
-
-$app = Set-AzureADApplication -ObjectId $appget.ObjectId -RequiredResourceAccess $permissionReq
-
+# Add all roles from RolesList
+foreach ($roleName in $RolesList) {
+    $permission = $graphApp.AppRoles | Where-Object { $_.Value -eq $roleName } | Select-Object -First 1
+    if ($permission) {
+        $resourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess"
+        $resourceAccess.Id = $permission.Id
+        $resourceAccess.Type = "Role"
+        $requiredResourceAccess.ResourceAccess += $resourceAccess
+    } else {
+        Write-Warning "Permission $roleName not found"
+    }
+}
+# Variables
+# Set all permissions at once
+Set-AzureADApplication -ObjectId $app.ObjectId -RequiredResourceAccess @($requiredResourceAccess)
+$AppObjectID = (Get-AzureADApplication -SearchString "NamedLocationApp").ObjectId
 $AppObjectID = (Get-AzureADApplication -SearchString "NamedLocationApp").ObjectId
 # Variables
-$appId = $appget.AppId # Replace with your App ID
-
 # Fetch the service principal of the app
-$servicePrincipal = Get-AzureADServicePrincipal -ObjectId $appget.AppId
-
+$servicePrincipal = Get-AzureADServicePrincipal -ObjectId $app.AppId
 # Grant admin consent
 $servicePrincipal.Oauth2Permissions | ForEach-Object {
     Set-AzureADOAuth2PermissionGrant -ObjectId $_.Id -ConsentType AllPrincipals -PrincipalId $servicePrincipal.ObjectId -Scope $_.Scope
@@ -98,10 +101,10 @@ $secret = New-AzureADApplicationPasswordCredential -ObjectId $AppObjectID -EndDa
 # Print the secret (make sure to store this securely)
 $secret.Value
 
-# Variables
-$tenantId = "04a44596-adcd-41ae-87e6-f1fdd2838714"
-$clientID = (Get-AzureADApplication -SearchString "NamedLocationApp").AppId
+# Print the secret (make sure to store this securely)
 $clientSecret = $secret.Value
+
+# Variables
 $resourceURL = "https://graph.microsoft.com"
 $tokenURL = "https://login.microsoftonline.com/$tenantId/oauth2/token"
 

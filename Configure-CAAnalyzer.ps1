@@ -16,7 +16,7 @@ function Show-Menu {
     Write-Host
 }
 
-function View-Configuration {
+function Show-Configuration {
     $config = Get-Configuration
     
     Clear-Host
@@ -85,7 +85,7 @@ function Set-OutputPath {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
-function Configure-ExcelOptions {
+function Set-ExcelOptions {
     $config = Get-Configuration
     
     Clear-Host
@@ -119,7 +119,7 @@ function Configure-ExcelOptions {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
-function Configure-PowerPointOptions {
+function Set-PowerPointOptions {
     $config = Get-Configuration
     
     Clear-Host
@@ -164,7 +164,7 @@ function Configure-PowerPointOptions {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
-function Configure-BenchmarkOptions {
+function Set-BenchmarkOptions {
     $config = Get-Configuration
     
     Clear-Host
@@ -218,6 +218,10 @@ function Reset-Configuration {
             # Get default configuration
             $config = Get-Configuration
             
+            # Save default configuration back to file
+            $configPath = Join-Path -Path $PSScriptRoot -ChildPath "config\config.json"
+            $config | ConvertTo-Json -Depth 5 | Out-File -FilePath $configPath -Encoding utf8
+            
             Write-Host "`nConfiguration reset to defaults successfully." -ForegroundColor Green
         }
         catch {
@@ -236,11 +240,11 @@ while ($running) {
     $choice = Read-Host "Enter your choice"
     
     switch ($choice) {
-        "1" { View-Configuration }
+        "1" { Show-Configuration }
         "2" { Set-OutputPath }
-        "3" { Configure-ExcelOptions }
-        "4" { Configure-PowerPointOptions }
-        "5" { Configure-BenchmarkOptions }
+        "3" { Set-ExcelOptions }
+        "4" { Set-PowerPointOptions }
+        "5" { Set-BenchmarkOptions }
         "6" { Reset-Configuration }
         "Q" { $running = $false }
         "q" { $running = $false }

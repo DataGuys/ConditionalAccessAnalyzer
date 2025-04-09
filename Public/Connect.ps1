@@ -170,9 +170,6 @@ function Connect-CAAnalyzer {
     
     process {
         try {
-            # Check if user is in Cloud Shell
-            $isCloudShell = $env:ACC_CLOUD -eq 'Azure'
-            
             # Check if already connected
             $context = Get-MgContext -ErrorAction SilentlyContinue
             if ($context) {
@@ -451,7 +448,7 @@ function Test-CAAnalyzerConnection {
             }
             
             # Test connection with a simple API call
-            $testRequest = Get-MgOrganization -ErrorAction Stop
+            Get-MgOrganization -ErrorAction Stop
             
             Write-Host "Microsoft Graph connection is active and has the required permissions" -ForegroundColor Green
             return $true

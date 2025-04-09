@@ -198,7 +198,7 @@ function Test-CISBenchmark {
                             $partiallyCompliant = $signInRiskPolicies.Count -gt 0
                             
                             return @{
-                                Compliant = $false # This control isn't fully enforceable via CA
+                                Compliant = $partiallyCompliant # Partially compliant if sign-in risk policies exist
                                 Details = $signInRiskPolicies
                                 Reason = "Conditional Access does not directly disable dormant accounts, but sign-in risk policies can help identify unusual sign-ins from inactive accounts"
                                 Recommendation = "Implement account lifecycle management processes outside of Conditional Access to handle dormant accounts"

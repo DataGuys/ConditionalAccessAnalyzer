@@ -40,11 +40,13 @@ This command downloads and installs the module from GitHub, then launches the an
 ### Manual Installation
 
 1. Clone this repository:
+
    ```powershell
    git clone https://github.com/DataGuys/ConditionalAccessAnalyzer.git
    ```
 
 2. Import the module:
+
    ```powershell
    Import-Module .\ConditionalAccessAnalyzer\ConditionalAccessAnalyzer.psd1
    ```

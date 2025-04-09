@@ -121,7 +121,7 @@ function Get-CAPoliciesSummary {
                 return $Id  # Return the ID if name lookup fails
             }
             catch {
-                Write-Warning "Failed to get name for $Type with ID $Id: $_"
+                Write-Warning "Failed to get name for $Type with ID $Id ${_}"
                 return $Id
             }
         }
@@ -628,6 +628,8 @@ function Get-CAPoliciesSummary {
                 # Process user risk conditions
                 if ($policy.Conditions.UserRiskLevels -and $policy.Conditions.UserRiskLevels.Count -gt 0) {
                     $userRiskSummary = "User risk levels: $($policy.Conditions.UserRiskLevels -join ", ")"
+                    # Ensure there's a property to store the summary
+                    $enhancedPolicy.AppliesTo.Conditions | Add-Member -NotePropertyName "UserRiskLevelsSummary" -NotePropertyValue $userRiskSummary -Force
                     $enhancedPolicy.Analysis.UsesUserRisk = $true
                 }
                 

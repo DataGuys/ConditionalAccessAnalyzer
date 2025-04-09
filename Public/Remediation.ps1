@@ -657,7 +657,7 @@ function Set-CAStaggeredRollout {
             # Display rollout plan
             $currentDate = Get-Date
             
-            Write-Host "Staged Rollout Plan for $policyBaseName:" -ForegroundColor Cyan
+            Write-Host "Staged Rollout Plan for $policyBaseName" -ForegroundColor Cyan
             Write-Host "===========================================`n" -ForegroundColor Cyan
             
             # Phase 1: Initial Report-Only Policy for All Groups

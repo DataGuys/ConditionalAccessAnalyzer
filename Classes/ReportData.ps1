@@ -1,5 +1,5 @@
-# Complete the Generate-JsonReport function
-function Generate-JsonReport {
+# Complete the ConvertTo-JsonReport function
+function ConvertTo-JsonReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -192,7 +192,7 @@ function Generate-JsonReport {
 }
 
 # Excel report generation function
-function Generate-ExcelReport {
+function Export-ExcelReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -661,7 +661,7 @@ function Generate-ExcelReport {
     $excelPackage.Dispose()
 }
 
-function Generate-ComplianceDashboardHtml {
+function ConvertTo-ComplianceDashboardHtml {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

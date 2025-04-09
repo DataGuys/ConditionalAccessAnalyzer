@@ -23,7 +23,7 @@ Write-Host "Creating export directory: $exportPath" -ForegroundColor Cyan
 New-Item -ItemType Directory -Path $exportPath -Force | Out-Null
 
 # Function to check if module is installed and install if necessary
-function Ensure-Module {
+function Install-RequiredModule {
     param (
         [string]$ModuleName
     )
@@ -41,8 +41,8 @@ function Ensure-Module {
 }
 
 # Ensure required modules are installed
-Ensure-Module -ModuleName "Microsoft.Graph.Authentication"
-Ensure-Module -ModuleName "Microsoft.Graph.Identity.SignIns"
+Install-RequiredModule -ModuleName "Microsoft.Graph.Authentication"
+Install-RequiredModule -ModuleName "Microsoft.Graph.Identity.SignIns"
 
 # Connect to Microsoft Graph with appropriate scopes
 try {
@@ -207,7 +207,7 @@ foreach ($template in $templates.value) {
         Write-Host "Exported template: $descriptiveName -> $fileName" -ForegroundColor Cyan
     }
     catch {
-        Write-Host "Error exporting template #$counter: $_" -ForegroundColor Red
+        Write-Host "Error exporting template #$counter $_" -ForegroundColor Red
     }
 }
 

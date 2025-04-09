@@ -83,7 +83,7 @@ else {
 }
 
 # Function to download files
-function Download-RepoFile {
+function Get-RepoFile {
     param (
         [string]$RelativePath,
         [string]$TargetPath
@@ -174,7 +174,7 @@ $totalFiles = $essentialFiles.Count
 
 Write-Host "Downloading module files..." -ForegroundColor Yellow
 foreach ($file in $essentialFiles) {
-    $success = Download-RepoFile -RelativePath $file.Path -TargetPath $file.Target
+    $success = Get-RepoFile -RelativePath $file.Path -TargetPath $file.Target
     if ($success) {
         $downloadedFiles++
         Write-Progress -Activity "Downloading Module Files" -Status "$downloadedFiles of $totalFiles complete" -PercentComplete (($downloadedFiles / $totalFiles) * 100)

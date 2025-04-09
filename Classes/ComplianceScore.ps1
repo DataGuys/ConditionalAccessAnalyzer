@@ -57,6 +57,7 @@ class CAComplianceScore {
             "Critical" { return "Red" }
             default { return "Gray" }
         }
+        return "Gray" # Fallback return to ensure all code paths return a value
     }
     
     # Get text color for visualization
@@ -69,6 +70,7 @@ class CAComplianceScore {
             "Critical" { return "White" }
             default { return "Black" }
         }
+        return "Black" # Fallback return to ensure all code paths return a value
     }
     
     # Get weighted score
