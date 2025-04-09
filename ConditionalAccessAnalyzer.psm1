@@ -121,3 +121,70 @@ foreach ($function in $publicFunctions) {
 #region Import Template Files
 $templateFiles = @(
     "Templates/CABestPracticePolicy.ps1",
+    "Templates/BenchmarkAnalyzer.ps1",
+    "Templates/CIS.ps1",
+    "Templates/NIST.ps1",
+    "Templates/ZeroTrust.ps1"
+)
+
+foreach ($template in $templateFiles) {
+    $templatePath = Join-Path -Path $PSScriptRoot -ChildPath (Get-NormalizedPath -Path $template)
+    if (Test-Path -Path $templatePath) {
+        try {
+            . $templatePath
+            Write-Verbose "Imported template file: $templatePath"
+        }
+        catch {
+            Write-Error "Failed to import template from $templatePath : $_"
+        }
+    }
+    else {
+        Write-Warning "Template file $templatePath not found"
+    }
+}
+#endregion
+
+#region Module Initialization
+Write-Verbose "Initializing Conditional Access Analyzer Module v1.1.0"
+
+# Initialize logging
+Write-Verbose "Configuring log path: $Script:CAAnalyzerLogPath"
+Initialize-CALogging -LogPath $Script:CAAnalyzerLogPath
+
+# Platform information
+if ($Script:IsCloudShell) {
+    Write-Verbose "Running in Azure Cloud Shell environment"
+} else {
+    Write-Verbose "Running in standard PowerShell environment"
+}
+
+if ($Script:IsWindows) {
+    Write-Verbose "Detected Windows platform"
+} else {
+    Write-Verbose "Detected Unix/Linux platform"
+}
+
+# Export public functions
+$publicFunctionsList = @()
+foreach ($function in $publicFunctions) {
+    $functionName = (Split-Path -Path $function -Leaf).Replace('.ps1', '')
+    $commands = Get-Command -CommandType Function -Module $MyInvocation.MyCommand.ModuleName | Where-Object { $_.Name -like "$functionName*" }
+    foreach ($command in $commands) {
+        $publicFunctionsList += $command.Name
+    }
+}
+
+# Add template exported functions
+$templateFunctionsList = @()
+foreach ($template in $templateFiles) {
+    $templateName = (Split-Path -Path $template -Leaf).Replace('.ps1', '')
+    $commands = Get-Command -CommandType Function -Module $MyInvocation.MyCommand.ModuleName | Where-Object { $_.Name -like "Test-*Benchmark" -or $_.Name -eq "New-CABestPracticePolicy" }
+    foreach ($command in $commands) {
+        if (-not ($templateFunctionsList -contains $command.Name)) {
+            $templateFunctionsList += $command.Name
+        }
+    }
+}
+
+Export-ModuleMember -Function ($publicFunctionsList + $templateFunctionsList)
+#endregion
