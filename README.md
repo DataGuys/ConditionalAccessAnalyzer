@@ -2,9 +2,15 @@
 
 A comprehensive PowerShell module for analyzing, assessing, and remediating Conditional Access policies in Microsoft Entra ID (formerly Azure AD).
 
-## Overview
+## Quick Installation
 
-Conditional Access Analyzer helps security administrators evaluate their Conditional Access implementation against security best practices, industry frameworks, and Zero Trust principles. It provides detailed reports, remediation recommendations, and the ability to deploy baseline policies.
+### Azure Cloud Shell One-Liner
+
+```powershell
+Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DataGuys/ConditionalAccessAnalyzer/refs/heads/main/Install-CAAnalyzer.ps1" -UseBasicParsing).Content
+```
+
+This command downloads and installs the module from GitHub, then sets up everything needed to run the analyzer.
 
 ## Features
 
@@ -14,107 +20,52 @@ Conditional Access Analyzer helps security administrators evaluate their Conditi
 - **Excel & PowerPoint Reports**: Create detailed reports for documentation and presentations
 - **Remediation Assistance**: Get actionable recommendations and deploy baseline policies
 - **Emergency Access Management**: Configure emergency access exclusions for break-glass scenarios
-- **Policy Templates**: Create best-practice Conditional Access policies with a single command
-
-## Quick Start
-
-### One-Liner for Azure Cloud Shell
-
-```powershell
-Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DataGuys/ConditionalAccessAnalyzer/refs/heads/main/InstallModule.ps1" -UseBasicParsing).Content
-```
-
-This command downloads and installs the module from GitHub, then launches the analyzer in interactive mode.
+- **Policy Templates**: Deploy Microsoft's recommended Conditional Access policies with a single command
 
 ## Requirements
 
-- PowerShell 5.1 or higher
+- PowerShell 5.1 or higher (works with PowerShell Core 7.x as well)
 - Microsoft.Graph modules:
   - Microsoft.Graph.Authentication
   - Microsoft.Graph.Identity.SignIns
   - Microsoft.Graph.Identity.DirectoryManagement
   - Microsoft.Graph.DeviceManagement
 
-## Installation
+## Key Commands
 
-### Manual Installation
-
-1. Clone this repository:
-
-   ```powershell
-   git clone https://github.com/DataGuys/ConditionalAccessAnalyzer.git
-   ```
-
-2. Import the module:
-
-   ```powershell
-   Import-Module .\ConditionalAccessAnalyzer\ConditionalAccessAnalyzer.psd1
-   ```
-
-## Usage
-
-### Connect to Microsoft Graph
-
-```powershell
-Connect-CAAnalyzer
-```
-
-### Run Compliance Check
-
-```powershell
-$results = Invoke-CAComplianceCheck
-```
-
-### Generate Compliance Report
-
-```powershell
-Export-CAComplianceReport -Results $results -ReportType HTML -Path ".\CAReport.html"
-```
-
-### Evaluate Against Security Benchmark
-
-```powershell
-Test-CASecurityBenchmark -BenchmarkName NIST -Results $results
-```
-
-### Create Best Practice Policies
-
-```powershell
-# Create MFA policy for administrators
-New-CABestPracticePolicy -PolicyType AdminMFA -DeployPolicy
-```
-
-### Get Remediation Recommendations
-
-```powershell
-Invoke-CAComplianceRemediation -Results $results -WhatIf
-```
-
-## Example Workflows
-
-### Security Assessment
+After installing the module, you can use the following commands:
 
 ```powershell
 # Connect to Microsoft Graph
 Connect-CAAnalyzer
 
-# Run compliance check
+# Run a comprehensive compliance check
 $results = Invoke-CAComplianceCheck
 
-# Export comprehensive dashboard
-Export-CAComplianceDashboard -Results $results -IncludeBenchmarks -OutputPath ".\CADashboard.html" -OpenDashboard
+# Generate HTML report
+Export-CAComplianceReport -Results $results -ReportType HTML -Path "./CAReport.html"
+
+# Test against security benchmarks
+Test-CASecurityBenchmark -BenchmarkName NIST -Results $results
+Test-CASecurityBenchmark -BenchmarkName CIS -Results $results
+
+# Create best practice policies
+New-CABestPracticePolicy -PolicyType AdminMFA -DeployPolicy
+
+# Get remediation recommendations
+Invoke-CAComplianceRemediation -Results $results -WhatIf
 ```
 
-### Implementing Zero Trust
+## Utility Scripts
 
-```powershell
-# Deploy Zero Trust baseline policies
-New-CABestPracticePolicy -PolicyType ZeroTrustBase -DeployPolicy -State "enabledForReportingButNotEnforced"
+The installer creates utility scripts in your home directory under `~/CAAnalyzer-Scripts/`:
 
-# Get Zero Trust maturity level
-$policies = Get-MgIdentityConditionalAccessPolicy
-Get-ZeroTrustJourneyStage -Policies $policies
-```
+- `Run-CAAnalyzer.ps1`: Interactive script to connect, analyze policies, and generate reports
+- `Deploy-CATemplates.ps1`: Simplified script to deploy Microsoft's recommended Conditional Access templates
+
+## Support
+
+If you encounter any issues, please open an issue on the GitHub repository.
 
 ## License
 
